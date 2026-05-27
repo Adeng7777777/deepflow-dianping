@@ -563,7 +563,7 @@ function parseRawNote(rawText) {
 
   return {
     date: dateMatch ? dateMatch[0] : state.draft.date,
-    student: studentMatch ? studentMatch[1] : state.draft.student,
+    student: "",
     subject: pickSubject(text, state.draft.subject),
     content: splitItems(content),
     issue: issue ? splitItems(issue) : "暂无明显问题，继续观察课堂表现和作业完成度。",
@@ -591,7 +591,7 @@ function normalizeAiRecord(data, rawText) {
 
   return {
     date: String(data.date || fallback.date).slice(0, 10),
-    student: String(data.student || fallback.student || "").trim(),
+    student: "",
     subject,
     content: splitItems(String(data.content || fallback.content || "").trim()),
     issue: splitItems(String(data.issue || fallback.issue || "").trim()),
