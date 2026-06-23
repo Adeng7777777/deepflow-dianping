@@ -4,6 +4,7 @@ const initialRecords = [
     date: "2026-05-13",
     student: "林可",
     subject: "数学",
+    grade: "DP1",
     content: "一次函数图像与实际应用题，重点训练斜率、截距和条件提取。",
     issue: "读题时容易漏掉单位换算，列式后没有主动检查变量含义。",
     homework: "完成一次函数应用题 12 题，整理 3 道错题的题眼和订正步骤。",
@@ -16,6 +17,7 @@ const initialRecords = [
     date: "2026-05-12",
     student: "周安",
     subject: "英语",
+    grade: "DP2",
     content: "阅读理解主旨题和细节题区分，练习定位关键词与段落归纳。",
     issue: "能找到原文信息，但表达答案时句子不够完整。",
     homework: "精读一篇 300 词短文，标注主题句，完成 5 个完整句回答。",
@@ -28,6 +30,7 @@ const initialRecords = [
     date: "2026-05-10",
     student: "陈一诺",
     subject: "语文",
+    grade: "MYP5",
     content: "记叙文人物描写赏析，拆解动作、语言、心理描写的作用。",
     issue: "答题能说出方向，但缺少结合文本的具体词句。",
     homework: "完成两篇阅读赏析题，每题按观点、文本、效果三步作答。",
@@ -66,6 +69,7 @@ function createEmptyDraft() {
     date: new Date().toISOString().slice(0, 10),
     student: "",
     subject: "数学",
+    grade: "",
     content: "",
     issue: "",
     homework: "",
@@ -114,7 +118,7 @@ function getFilteredRecords() {
 
   return [...state.records]
     .filter((record) => {
-      const text = `${record.student} ${record.subject} ${record.content} ${record.issue} ${record.homework} ${record.evaluation}`.toLowerCase();
+      const text = `${record.student} ${record.subject} ${record.grade || ""} ${record.content} ${record.issue} ${record.homework} ${record.evaluation}`.toLowerCase();
       return (
         (!normalizedQuery || text.includes(normalizedQuery)) &&
         (state.subject === "全部" || record.subject === state.subject) &&
@@ -359,6 +363,7 @@ function normalizeRecords(records) {
       date: String(record.date || "").slice(0, 10) || new Date().toISOString().slice(0, 10),
       student: String(record.student || ""),
       subject: String(record.subject || "数学").trim() || "数学",
+      grade: String(record.grade || ""),
       content: String(record.content || ""),
       issue: String(record.issue || "暂无明显问题，继续观察课堂表现和作业完成度。"),
       homework: String(record.homework || "本次未布置额外作业。"),
@@ -568,6 +573,7 @@ function parseRawNote(rawText) {
     date: dateMatch ? dateMatch[0] : state.draft.date,
     student: "",
     subject: pickSubject(text, state.draft.subject),
+    grade: "",
     content: splitItems(content),
     issue: issue ? splitItems(issue) : "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: homework ? splitItems(homework) : "本次未布置额外作业。",
@@ -596,6 +602,7 @@ function normalizeAiRecord(data, rawText) {
     date: String(data.date || fallback.date).slice(0, 10),
     student: "",
     subject,
+    grade: "",
     content: splitItems(String(data.content || fallback.content || "").trim()),
     issue: splitItems(String(data.issue || fallback.issue || "").trim()),
     homework: splitItems(String(data.homework || fallback.homework || "").trim()),
@@ -641,6 +648,7 @@ function createRecordFromDraft() {
     date: state.draft.date,
     student,
     subject: state.draft.subject,
+    grade: state.draft.grade || "",
     content,
     issue: state.draft.issue.trim() || "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: state.draft.homework.trim() || "本次未布置额外作业。",
@@ -659,6 +667,7 @@ function startEditingSelectedRecord() {
     date: record.date,
     student: record.student,
     subject: record.subject,
+    grade: record.grade || "",
     content: record.content,
     issue: record.issue,
     homework: record.homework,
@@ -707,7 +716,7 @@ function renderRecordItem(record, selected) {
       <button class="record-item-btn" data-record-id="${record.id}">
         <span>
           <strong>${escapeHtml(record.student)}</strong>
-          <small>${escapeHtml(record.date)} · ${escapeHtml(record.subject)} · ${escapeHtml(record.status)}</small>
+          <small>${escapeHtml(record.date)} · ${escapeHtml(record.subject)}${record.grade ? ` · ${escapeHtml(record.grade)}` : ""} · ${escapeHtml(record.status)}</small>
         </span>
         <b>${record.score.toFixed(1)}</b>
       </button>
@@ -723,7 +732,7 @@ function renderRecordList(filteredRecords, selected) {
   }
 
   const groups = new Map();
-  const groupKey = state.groupBy === "按学生" ? "student" : "subject";
+  const groupKey = state.groupBy === "按学生" ? "student" : state.groupBy === "按科目" ? "subject" : "grade";
 
   filteredRecords.forEach((r) => {
     const key = r[groupKey] || "未分类";
@@ -796,6 +805,7 @@ function render() {
                 <option value="无" ${state.groupBy === "无" ? "selected" : ""}>不分组</option>
                 <option value="按学生" ${state.groupBy === "按学生" ? "selected" : ""}>按学生</option>
                 <option value="按科目" ${state.groupBy === "按科目" ? "selected" : ""}>按科目</option>
+                <option value="按年级" ${state.groupBy === "按年级" ? "selected" : ""}>按年级</option>
               </select>
             </label>
           </div>
@@ -841,6 +851,7 @@ function render() {
 
             <div class="record-meta">
               <span>${escapeHtml(selected?.subject || "-")}</span>
+              ${selected?.grade ? `<span>${escapeHtml(selected.grade)}</span>` : ""}
               <span>评价 ${selected ? selected.score.toFixed(1) : "-"}/5.0</span>
             </div>
 
@@ -916,6 +927,13 @@ function render() {
               <input name="date" type="date" value="${escapeHtml(state.draft.date)}" />
               <input name="student" value="${escapeHtml(state.draft.student)}" placeholder="学生姓名" />
               <input name="subject" value="${escapeHtml(state.draft.subject)}" placeholder="科目" />
+              <input name="grade" value="${escapeHtml(state.draft.grade)}" placeholder="年级（如DP1、高一）" list="gradeList" autocomplete="off" />
+              <datalist id="gradeList">
+                <option value="DP1"><option value="DP2"><option value="MYP4"><option value="MYP5">
+                <option value="高一"><option value="高二"><option value="高三">
+                <option value="初一"><option value="初二"><option value="初三">
+                <option value="IGCSE"><option value="A-Level">
+              </datalist>
               <label class="range-field">
                 <span>对应评价 <output id="scoreOutput">${escapeHtml(state.draft.score)}</output></span>
                 <input name="score" type="range" min="1" max="5" step="0.1" value="${escapeHtml(state.draft.score)}" />
@@ -944,6 +962,7 @@ function syncDraftFromForm(form) {
   state.draft.date = String(formData.get("date") || state.draft.date);
   state.draft.student = String(formData.get("student") || "");
   state.draft.subject = String(formData.get("subject") || "").trim() || "数学";
+  state.draft.grade = String(formData.get("grade") || "").trim();
   state.draft.status = String(formData.get("status") || state.draft.status || "进行中");
   state.draft.score = String(formData.get("score") || "4.5");
   state.draft.content = String(formData.get("content") || "");
