@@ -300,10 +300,10 @@ function exportCurrentRecordImage() {
 
   const cardWidth = 676;
   const cardHeight = 312;
-  drawRecordImageCard(ctx, "学习内容", selected.content, 34, 406, cardWidth, cardHeight, true);
-  drawRecordImageCard(ctx, "反映问题", selected.issue, 740, 406, cardWidth, cardHeight);
+  drawRecordImageCard(ctx, "本节课所学内容", selected.content, 34, 406, cardWidth, cardHeight, true);
+  drawRecordImageCard(ctx, "掌握情况", selected.issue, 740, 406, cardWidth, cardHeight);
   drawRecordImageCard(ctx, "课后作业", selected.homework, 34, 746, cardWidth, cardHeight);
-  drawRecordImageCard(ctx, "对应评价", selected.evaluation, 740, 746, cardWidth, cardHeight, true);
+  drawRecordImageCard(ctx, "综合评价", selected.evaluation, 740, 746, cardWidth, cardHeight, true);
 
   const link = document.createElement("a");
   const safeName = selected.student.replace(/[\\/:*?"<>|]/g, "_") || "课后点评";
@@ -336,19 +336,19 @@ function renderPrintSheet(record) {
       </header>
 
       <section>
-        <h2>学习内容</h2>
-        ${paragraphList(record.content, "暂无学习内容")}
+        <h2>本节课所学内容</h2>
+        ${paragraphList(record.content, "暂无内容")}
       </section>
       <section>
-        <h2>反映问题</h2>
-        ${paragraphList(record.issue, "暂无反馈问题")}
+        <h2>掌握情况</h2>
+        ${paragraphList(record.issue, "暂无反馈")}
       </section>
       <section>
         <h2>课后作业</h2>
-        ${paragraphList(record.homework, "暂无课后作业")}
+        ${paragraphList(record.homework, "暂无作业")}
       </section>
       <section>
-        <h2>对应评价</h2>
+        <h2>综合评价</h2>
         ${paragraphList(record.evaluation, "暂无评价")}
       </section>
     </article>
@@ -521,53 +521,36 @@ function findSentence(sentences, keywords) {
 
 function parseRawNote(rawText) {
   const text = rawText.trim();
-  const sentences = splitSentences(text);
   const sections = firstSection(text, [
-    {
-      key: "content",
-      starts: ["这节课学习的是", "这节课学习了", "本节课学习的是", "本节课学习了", "今天学习的是", "今天学习了", "学习的是", "学习了", "学习内容"]
-    },
-    {
-      key: "issue",
-      starts: ["反映的情况", "反应的情况", "反馈的情况", "反框的情况", "反馈情况", "反映问题", "反馈问题", "问题就是"]
-    },
-    {
-      key: "homework",
-      starts: ["课后作业呢", "课后作业", "作业呢", "作业就是", "作业"]
-    },
-    {
-      key: "evaluation",
-      starts: ["这节课的评价就是", "这节课的评价是", "这节课评价就是", "这节课评价是", "本节课的评价就是", "本节课的评价是", "评价就是", "评价是", "对应评价", "评价"]
-    }
+    { key: "content", starts: ["本节课所学内容"] },
+    { key: "mastery", starts: ["掌握情况"] },
+    { key: "homework", starts: ["课后作业"] },
+    { key: "nextPlan", starts: ["下节课计划"] },
+    { key: "classStatus", starts: ["学生上课状态"] },
   ]);
-  const studentMatch =
-    text.match(/(?:学生|姓名)[：:\s]*([\u4e00-\u9fa5A-Za-z0-9]{1,12})/) ||
-    text.match(/^([\u4e00-\u9fa5]{2,4})[，,：:\s]/) ||
-    text.match(/([\u4e00-\u9fa5]{2,4})(?:部分)?(?:计算|对于|基础|作业|课堂|表现|解题|很认真)/);
+
   const dateMatch = text.match(/\d{4}-\d{1,2}-\d{1,2}/);
 
-  const content =
-    sections.content ||
-    extractBetween(text, ["这节课学习了", "本节课学习了", "今天学习了", "学习了", "学习内容"], ["反映的情况", "反映问题", "反馈问题", "问题", "课后作业", "作业", "然后"]) ||
-    extractByLabels(text, ["学习内容", "内容"]) ||
-    findSentence(sentences, ["学习", "复习", "讲解", "训练", "练习", "掌握", "课堂"]) ||
+  const content = cleanField(sections.content) ||
+    extractByLabel(text, "本节课所学内容") ||
     text;
-  const issue =
-    sections.issue ||
-    extractBetween(text, ["反映的情况", "反映问题", "反馈问题", "问题"], ["课后作业", "作业", "然后", "评价", "对应评价"]) ||
-    extractByLabels(text, ["反馈问题", "反映问题", "反映的情况", "问题"]) ||
-    findSentence(sentences, ["问题", "不足", "薄弱", "错误", "不会", "不够", "困难", "需要"]);
-  const homework =
-    sections.homework ||
-    extractBetween(text, ["课后作业", "作业"], ["然后", "评价", "对应评价", "这节课主要是"]) ||
-    extractByLabels(text, ["课后作业", "作业"]) ||
-    findSentence(sentences, ["作业", "完成", "练习", "整理", "背诵", "预习", "订正"]);
-  const evaluation =
-    sections.evaluation ||
-    extractBetween(text, ["然后", "这节课主要是", "主要是", "评价"], ["$"]) ||
-    extractByLabels(text, ["对应评价", "评价"]) ||
-    findSentence(sentences, ["评价", "表现", "积极", "专注", "进步", "优秀", "稳定", "掌握"]) ||
-    "已根据课堂描述生成评价，建议后续继续补充具体表现。";
+
+  const mastery = cleanField(sections.mastery) ||
+    extractByLabel(text, "掌握情况");
+
+  const homework = cleanField(sections.homework) ||
+    extractByLabel(text, "课后作业");
+
+  const classStatus = cleanField(sections.classStatus) ||
+    extractByLabel(text, "学生上课状态");
+
+  const nextPlan = cleanField(sections.nextPlan) ||
+    extractByLabel(text, "下节课计划");
+
+  const evaluationParts = [];
+  if (classStatus) evaluationParts.push("课堂状态：" + classStatus);
+  if (nextPlan) evaluationParts.push("下节课计划：" + nextPlan);
+  const evaluation = evaluationParts.join("；") || "已根据课堂描述生成评价。";
 
   return {
     date: dateMatch ? dateMatch[0] : state.draft.date,
@@ -575,13 +558,28 @@ function parseRawNote(rawText) {
     subject: pickSubject(text, state.draft.subject),
     grade: "",
     content: splitItems(content),
-    issue: issue ? splitItems(issue) : "暂无明显问题，继续观察课堂表现和作业完成度。",
+    issue: mastery ? splitItems(mastery) : "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: homework ? splitItems(homework) : "本次未布置额外作业。",
     evaluation: cleanSection(evaluation),
     score: pickScore(text),
     status: pickStatus(text),
     rawNote: rawText
   };
+}
+
+function cleanField(value) {
+  return String(value || "").replace(/^[：:\s]+/, "").trim();
+}
+
+function extractByLabel(text, label) {
+  const lines = text.split(/[\n]+/);
+  for (const line of lines) {
+    if (line.includes(label)) {
+      const parts = line.split(label);
+      if (parts.length > 1) return cleanField(parts[1]);
+    }
+  }
+  return "";
 }
 
 function safeJsonFromText(text) {
@@ -865,19 +863,19 @@ function render() {
 
             <div class="story-grid">
               <article class="story-block primary">
-                <small>学习内容</small>
-                ${paragraphList(selected?.content, "暂无学习内容")}
+                <small>本节课所学内容</small>
+                ${paragraphList(selected?.content, "暂无内容")}
               </article>
               <article class="story-block">
-                <small>反映问题</small>
-                ${paragraphList(selected?.issue, "暂无反馈问题")}
+                <small>掌握情况</small>
+                ${paragraphList(selected?.issue, "暂无反馈")}
               </article>
               <article class="story-block">
                 <small>课后作业</small>
-                ${paragraphList(selected?.homework, "暂无课后作业")}
+                ${paragraphList(selected?.homework, "暂无作业")}
               </article>
               <article class="story-block primary">
-                <small>对应评价</small>
+                <small>综合评价</small>
                 ${paragraphList(selected?.evaluation, "暂无评价")}
               </article>
             </div>
@@ -907,17 +905,22 @@ function render() {
             </div>
             <div class="quick-note">
               <div class="raw-note-layout">
-                <textarea id="rawNote" placeholder="把课堂反馈直接写在这里，按右侧模板说即可。">${escapeHtml(state.draft.rawNote)}</textarea>
-                <aside class="speech-template" aria-label="话术断点模板">
-                  <strong>话术断点模板</strong>
-                  <p>这节课学习的是：...</p>
-                  <p>反映的情况是：...</p>
-                  <p>课后作业是：...</p>
-                  <p>这节课的评价是：...</p>
-                  <em>多个知识点或问题可用“以及”连接，会自动分成 a、b、c。</em>
+                <textarea id="rawNote" placeholder="按右侧模板逐项填写课后反馈...">${escapeHtml(state.draft.rawNote)}</textarea>
+                <aside class="speech-template" aria-label="课后反馈模板">
+                  <strong>课后反馈模板</strong>
+                  <p>家长您好！xxxx课堂小结</p>
+                  <p>上课时长：x分钟</p>
+                  <p>学生姓名：xxx</p>
+                  <p>所授科目：</p>
+                  <p>学生上课状态：<em>如：专注认真、互动积极、偶尔走神、需要提醒</em></p>
+                  <p>本节课所学内容：<em>如：二次函数顶点式、圆的综合题</em></p>
+                  <p>掌握情况：<em>如：已掌握、部分掌握（具体薄弱点）、未掌握</em></p>
+                  <p>课后作业：<em>如：完成练习册第x页、整理错题</em></p>
+                  <p>下节课计划：<em>如：复习巩固xx、进入新章节xx</em></p>
+                  <em>复制到左侧输入框，逐项填写后点击 AI 拆分。</em>
                 </aside>
               </div>
-              <p class="parse-hint">按模板里的四个断点说，系统会更稳定地拆成内容、反映问题、课后作业和评价。</p>
+              <p class="parse-hint">按模板逐项填写后点击 AI 拆分，系统会自动识别各字段。</p>
               <div class="quick-actions">
                 <button id="parseButton" class="primary-button" type="button" ${state.isAiParsing ? "disabled" : ""}>${icon("spark")}${state.isAiParsing ? "解析中..." : "AI 拆分到下方字段"}</button>
                 <button id="parseSaveButton" class="primary-button alt" type="button" ${state.isAiParsing ? "disabled" : ""}>${icon("plus")}${state.isAiParsing ? "解析中..." : "AI 拆分并保存"}</button>
@@ -938,10 +941,10 @@ function render() {
                 <span>对应评价 <output id="scoreOutput">${escapeHtml(state.draft.score)}</output></span>
                 <input name="score" type="range" min="1" max="5" step="0.1" value="${escapeHtml(state.draft.score)}" />
               </label>
-              <textarea name="content" placeholder="学习内容">${escapeHtml(state.draft.content)}</textarea>
-              <textarea name="issue" placeholder="反映问题">${escapeHtml(state.draft.issue)}</textarea>
+              <textarea name="content" placeholder="本节课所学内容">${escapeHtml(state.draft.content)}</textarea>
+              <textarea name="issue" placeholder="掌握情况">${escapeHtml(state.draft.issue)}</textarea>
               <textarea name="homework" placeholder="课后作业">${escapeHtml(state.draft.homework)}</textarea>
-              <textarea name="evaluation" placeholder="对应评价">${escapeHtml(state.draft.evaluation)}</textarea>
+              <textarea name="evaluation" placeholder="综合评价">${escapeHtml(state.draft.evaluation)}</textarea>
               <div class="form-actions">
                 <button class="primary-button submit-button" type="submit">${icon("plus")}${state.editingId ? "保存修改" : "保存点评"}</button>
                 ${state.editingId ? `<button id="cancelEditButton" class="icon-button text-button" type="button">取消修改</button>` : ""}
