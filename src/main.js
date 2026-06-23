@@ -53,6 +53,7 @@ const state = {
   storageStatus: "正在读取本地保存的学生记录...",
   isAiParsing: false,
   editingId: null,
+  batchSelectedIds: new Set(),
   draft: createEmptyDraft()
 };
 
@@ -738,15 +739,25 @@ function render() {
             </label>
           </div>
 
+          <div class="batch-bar">
+            <label class="batch-check">
+              <input id="selectAllCheckbox" type="checkbox" ${filteredRecords.length > 0 && filteredRecords.every((r) => state.batchSelectedIds.has(r.id)) ? "checked" : ""} />
+              全选 (${filteredRecords.length})
+            </label>
+            <button id="batchDeleteButton" class="batch-delete-btn" type="button" ${state.batchSelectedIds.size === 0 ? "disabled" : ""}>${icon("delete")}删除选中 (${state.batchSelectedIds.size})</button>
+          </div>
           <div class="record-list">
             ${filteredRecords.map((record) => `
-              <button class="record-item ${record.id === selected?.id ? "active" : ""}" data-record-id="${record.id}">
-                <span>
-                  <strong>${escapeHtml(record.student)}</strong>
-                  <small>${escapeHtml(record.date)} · ${escapeHtml(record.subject)} · ${escapeHtml(record.status)}</small>
-                </span>
-                <b>${record.score.toFixed(1)}</b>
-              </button>
+              <div class="record-item ${record.id === selected?.id ? "active" : ""}">
+                <input class="record-checkbox" type="checkbox" data-record-id="${record.id}" ${state.batchSelectedIds.has(record.id) ? "checked" : ""} />
+                <button class="record-item-btn" data-record-id="${record.id}">
+                  <span>
+                    <strong>${escapeHtml(record.student)}</strong>
+                    <small>${escapeHtml(record.date)} · ${escapeHtml(record.subject)} · ${escapeHtml(record.status)}</small>
+                  </span>
+                  <b>${record.score.toFixed(1)}</b>
+                </button>
+              </div>
             `).join("") || `<p class="empty-state">没有匹配的课后点评记录</p>`}
           </div>
         </aside>
@@ -912,7 +923,45 @@ function bindEvents() {
     render();
   });
 
-  document.querySelectorAll(".record-item").forEach((button) => {
+  document.getElementById("selectAllCheckbox")?.addEventListener("change", (event) => {
+    const filtered = getFilteredRecords();
+    if (event.target.checked) {
+      filtered.forEach((r) => state.batchSelectedIds.add(r.id));
+    } else {
+      filtered.forEach((r) => state.batchSelectedIds.delete(r.id));
+    }
+    render();
+  });
+
+  document.querySelectorAll(".record-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const id = Number(checkbox.dataset.recordId);
+      if (checkbox.checked) {
+        state.batchSelectedIds.add(id);
+      } else {
+        state.batchSelectedIds.delete(id);
+      }
+      render();
+    });
+  });
+
+  document.getElementById("batchDeleteButton")?.addEventListener("click", () => {
+    if (state.batchSelectedIds.size === 0) return;
+    state.records = state.records.filter((r) => !state.batchSelectedIds.has(r.id));
+    if (!state.records.find((r) => r.id === state.selectedId)) {
+      state.selectedId = state.records[0]?.id;
+    }
+    state.batchSelectedIds.clear();
+    state.editingId = null;
+    state.draft = createEmptyDraft();
+    state.storageStatus = `已批量删除记录，正在保存...`;
+    render();
+    persistRecords();
+    render();
+  });
+
+  document.querySelectorAll(".record-item-btn").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedId = Number(button.dataset.recordId);
       if (state.editingId && state.editingId !== state.selectedId) {

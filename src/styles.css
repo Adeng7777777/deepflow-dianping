@@ -100,7 +100,7 @@ button {
 
 .brand p,
 .metric-card em,
-.record-item small {
+.record-item-btn small {
   color: #6a6f75;
   font-size: 13px;
   font-style: normal;
@@ -168,19 +168,87 @@ button {
   padding-right: 2px;
 }
 
+/* Batch action bar */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.batch-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4d555d;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.batch-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2e718d;
+  cursor: pointer;
+}
+
+.batch-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: #d44c2f;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.batch-delete-btn:disabled {
+  background: #c4beb6;
+  cursor: not-allowed;
+  color: #8c8680;
+}
+
+/* Record item with checkbox */
 .record-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 253, 250, 0.72);
+  padding-right: 4px;
+}
+
+.record-checkbox {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: #2e718d;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.record-item-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: 100%;
+  flex: 1 1 auto;
   min-height: 74px;
   padding: 13px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: rgba(255, 253, 250, 0.72);
+  padding-left: 4px;
+  border: 0;
+  background: transparent;
   color: inherit;
   text-align: left;
+  cursor: pointer;
 }
 
 .record-item span {
