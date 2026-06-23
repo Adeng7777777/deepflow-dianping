@@ -215,6 +215,35 @@ button {
   color: #8c8680;
 }
 
+/* Grouped record list */
+.record-group {
+  margin-bottom: 4px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #dce4e8;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.group-name {
+  color: #1f4d5c;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.group-count {
+  color: #5a6b73;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 /* Record item with checkbox */
 .record-item {
   display: flex;

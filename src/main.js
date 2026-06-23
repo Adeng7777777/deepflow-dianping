@@ -54,6 +54,8 @@ const state = {
   isAiParsing: false,
   editingId: null,
   batchSelectedIds: new Set(),
+  composing: false,
+  groupBy: "无",
   draft: createEmptyDraft()
 };
 
@@ -698,6 +700,57 @@ async function saveCurrentDraft() {
   render();
 }
 
+function renderRecordItem(record, selected) {
+  return `
+    <div class="record-item ${record.id === selected?.id ? "active" : ""}">
+      <input class="record-checkbox" type="checkbox" data-record-id="${record.id}" ${state.batchSelectedIds.has(record.id) ? "checked" : ""} />
+      <button class="record-item-btn" data-record-id="${record.id}">
+        <span>
+          <strong>${escapeHtml(record.student)}</strong>
+          <small>${escapeHtml(record.date)} · ${escapeHtml(record.subject)} · ${escapeHtml(record.status)}</small>
+        </span>
+        <b>${record.score.toFixed(1)}</b>
+      </button>
+    </div>
+  `;
+}
+
+function renderRecordList(filteredRecords, selected) {
+  if (!filteredRecords.length) return "";
+
+  if (state.groupBy === "无") {
+    return filteredRecords.map((r) => renderRecordItem(r, selected)).join("");
+  }
+
+  const groups = new Map();
+  const groupKey = state.groupBy === "按学生" ? "student" : "subject";
+
+  filteredRecords.forEach((r) => {
+    const key = r[groupKey] || "未分类";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+
+  const groupNames = [...groups.keys()].sort((a, b) =>
+    a.localeCompare(b, "zh-CN")
+  );
+
+  return groupNames
+    .map((name) => {
+      const items = groups.get(name);
+      return `
+        <div class="record-group">
+          <div class="group-header">
+            <span class="group-name">${escapeHtml(name)}</span>
+            <span class="group-count">${items.length} 条</span>
+          </div>
+          ${items.map((r) => renderRecordItem(r, selected)).join("")}
+        </div>
+      `;
+    })
+    .join("");
+}
+
 function render() {
   const filteredRecords = getFilteredRecords();
   const selected = getSelectedRecord(filteredRecords);
@@ -737,6 +790,14 @@ function render() {
                 <option value="student" ${state.sortKey === "student" ? "selected" : ""}>学生姓名</option>
               </select>
             </label>
+            <label>
+              <span>${icon("clipboard")}分组</span>
+              <select id="groupBySelect">
+                <option value="无" ${state.groupBy === "无" ? "selected" : ""}>不分组</option>
+                <option value="按学生" ${state.groupBy === "按学生" ? "selected" : ""}>按学生</option>
+                <option value="按科目" ${state.groupBy === "按科目" ? "selected" : ""}>按科目</option>
+              </select>
+            </label>
           </div>
 
           <div class="batch-bar">
@@ -747,18 +808,7 @@ function render() {
             <button id="batchDeleteButton" class="batch-delete-btn" type="button" ${state.batchSelectedIds.size === 0 ? "disabled" : ""}>${icon("delete")}删除选中 (${state.batchSelectedIds.size})</button>
           </div>
           <div class="record-list">
-            ${filteredRecords.map((record) => `
-              <div class="record-item ${record.id === selected?.id ? "active" : ""}">
-                <input class="record-checkbox" type="checkbox" data-record-id="${record.id}" ${state.batchSelectedIds.has(record.id) ? "checked" : ""} />
-                <button class="record-item-btn" data-record-id="${record.id}">
-                  <span>
-                    <strong>${escapeHtml(record.student)}</strong>
-                    <small>${escapeHtml(record.date)} · ${escapeHtml(record.subject)} · ${escapeHtml(record.status)}</small>
-                  </span>
-                  <b>${record.score.toFixed(1)}</b>
-                </button>
-              </div>
-            `).join("") || `<p class="empty-state">没有匹配的课后点评记录</p>`}
+            ${renderRecordList(filteredRecords, selected) || `<p class="empty-state">没有匹配的课后点评记录</p>`}
           </div>
         </aside>
 
@@ -903,7 +953,18 @@ function syncDraftFromForm(form) {
 }
 
 function bindEvents() {
+  document.getElementById("queryInput")?.addEventListener("compositionstart", () => {
+    state.composing = true;
+  });
+
+  document.getElementById("queryInput")?.addEventListener("compositionend", (event) => {
+    state.composing = false;
+    state.query = event.target.value;
+    render();
+  });
+
   document.getElementById("queryInput")?.addEventListener("input", (event) => {
+    if (state.composing) return;
     state.query = event.target.value;
     render();
   });
@@ -920,6 +981,12 @@ function bindEvents() {
 
   document.getElementById("sortSelect")?.addEventListener("change", (event) => {
     state.sortKey = event.target.value;
+    render();
+  });
+
+  document.getElementById("groupBySelect")?.addEventListener("change", (event) => {
+    state.groupBy = event.target.value;
+    state.batchSelectedIds.clear();
     render();
   });
 
