@@ -940,13 +940,15 @@ function bindFeedbackEvents() {
       else return;
 
       const idx = arr.indexOf(val);
-      if (idx >= 0) arr.splice(idx, 1);
+      if (idx >= 0) { arr.splice(idx, 1); chip.classList.remove("active"); }
       else {
         if (type === "weakness" && arr.length >= 2) return;
-        if (type === "duration") state.feedback.durations = [val];
-        else arr.push(val);
+        if (type === "duration") {
+          document.querySelectorAll('.fb-chip[data-fb="duration"]').forEach(c => c.classList.remove("active"));
+          state.feedback.durations = [val];
+        } else arr.push(val);
+        chip.classList.add("active");
       }
-      render();
     });
   });
 
@@ -961,7 +963,7 @@ function bindFeedbackEvents() {
       state.feedback.strengths = state.feedback.strengths.filter((s) => s !== val);
       state.feedback.weaknesses = state.feedback.weaknesses.filter((s) => s !== val);
       state.feedback.homework = state.feedback.homework.filter((s) => s !== val);
-      render();
+      del.parentElement.remove();
     });
   });
 
