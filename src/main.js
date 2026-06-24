@@ -67,6 +67,22 @@ const state = {
   groupBy: "无",
   classStatusOptions: loadClassStatusOptions(),
   newStatusInput: "",
+  activeTab: "archive",
+  feedback: {
+    date: new Date().toISOString().slice(0, 10),
+    time: "",
+    student: "",
+    content: "",
+    strengths: [],
+    weaknesses: [],
+    homework: [],
+    customStrengths: [],
+    customWeaknesses: [],
+    customHomework: [],
+    evaluation: "",
+    nextLesson: "",
+    generated: "",
+  },
   draft: createEmptyDraft()
 };
 
@@ -819,6 +835,212 @@ function renderRecordList(filteredRecords, selected) {
     .join("");
 }
 
+function renderFeedbackTab() {
+  const fb = state.feedback;
+  const strengths = ["头脑清醒", "逻辑清晰", "配合度高", "计算过程较严谨", "能够主动思考问题", "能够完成大部分题目", "订正和复盘意识较强", "某类题型理解较为深入"];
+  const weaknesses = ["计算准确度需要加强", "做题粗心", "审题不够详细", "解题步骤不够规范", "检查意识需要加强", "学习速度较快"];
+  const homeworkOpts = ["重做与复盘错题", "完成课堂上布置的作业"];
+
+  return `
+    <main class="feedback-app">
+      <section class="feedback-form">
+        <header class="fb-header">
+          <h2>家长反馈生成器</h2>
+          <p>填写课堂信息，一键生成发送给家长的消息。</p>
+        </header>
+
+        <div class="fb-row">
+          <label>日期 <input id="fbDate" type="date" value="${escapeHtml(fb.date)}" /></label>
+          <label>上课时间 <input id="fbTime" type="text" value="${escapeHtml(fb.time)}" placeholder="如 8:00-10:00" /></label>
+          <label>学生姓名 <input id="fbStudent" type="text" value="${escapeHtml(fb.student)}" placeholder="张三" /></label>
+        </div>
+
+        <div class="fb-section">
+          <h3>📖 课堂内容</h3>
+          <textarea id="fbContent" placeholder="每行一个知识点，例如：&#10;二次函数的图像和性质&#10;分层作业与跟踪训练">${escapeHtml(fb.content)}</textarea>
+        </div>
+
+        <div class="fb-section">
+          <h3>✅ 课堂优点 <small>（可多选 + 自定义）</small></h3>
+          <div class="fb-chips">
+            ${strengths.map((s) => `<button class="fb-chip ${fb.strengths.includes(s) ? "active" : ""}" data-fb="strength" data-val="${escapeHtml(s)}">${s}</button>`).join("")}
+            ${fb.customStrengths.map((s) => `<button class="fb-chip custom active" data-fb="strength" data-val="${escapeHtml(s)}">${escapeHtml(s)}<i class="chip-del" data-fb="del-strength" data-val="${escapeHtml(s)}">×</i></button>`).join("")}
+            <input class="fb-chip-input" id="fbCustomStrength" placeholder="+自定义" maxlength="8" />
+          </div>
+        </div>
+
+        <div class="fb-section">
+          <h3>⚠️ 课堂不足 <small>（选1-2项 + 自定义）</small></h3>
+          <div class="fb-chips">
+            ${weaknesses.map((s) => `<button class="fb-chip ${fb.weaknesses.includes(s) ? "active" : ""}" data-fb="weakness" data-val="${escapeHtml(s)}">${s}</button>`).join("")}
+            ${fb.customWeaknesses.map((s) => `<button class="fb-chip custom active" data-fb="weakness" data-val="${escapeHtml(s)}">${escapeHtml(s)}<i class="chip-del" data-fb="del-weakness" data-val="${escapeHtml(s)}">×</i></button>`).join("")}
+            <input class="fb-chip-input" id="fbCustomWeakness" placeholder="+自定义" maxlength="8" />
+          </div>
+        </div>
+
+        <div class="fb-section">
+          <h3>📝 课后作业 <small>（可多选 + 自定义）</small></h3>
+          <div class="fb-chips">
+            ${homeworkOpts.map((s) => `<button class="fb-chip ${fb.homework.includes(s) ? "active" : ""}" data-fb="homework" data-val="${escapeHtml(s)}">${s}</button>`).join("")}
+            ${fb.customHomework.map((s) => `<button class="fb-chip custom active" data-fb="homework" data-val="${escapeHtml(s)}">${escapeHtml(s)}<i class="chip-del" data-fb="del-homework" data-val="${escapeHtml(s)}">×</i></button>`).join("")}
+            <input class="fb-chip-input" id="fbCustomHomework" placeholder="+自定义" maxlength="12" />
+          </div>
+        </div>
+
+        <div class="fb-section">
+          <h3>💬 课程反馈</h3>
+          <textarea id="fbEvaluation" placeholder="描述本节课孩子的表现、进步和需要注意的地方..." rows="4">${escapeHtml(fb.evaluation)}</textarea>
+        </div>
+
+        <div class="fb-section">
+          <h3>📅 下节课计划</h3>
+          <textarea id="fbNextLesson" placeholder="预告下节课内容和重点..." rows="2">${escapeHtml(fb.nextLesson)}</textarea>
+        </div>
+
+        <button id="fbGenerate" class="fb-generate-btn">✨ 生成家长消息</button>
+      </section>
+
+      ${fb.generated ? `
+      <section class="feedback-output">
+        <div class="fb-output-header">
+          <h3>生成结果</h3>
+          <button id="fbCopy" class="fb-copy-btn">📋 一键复制</button>
+        </div>
+        <div class="fb-message" id="fbMessage">${escapeHtml(fb.generated).replace(/\n/g, "<br>")}</div>
+      </section>
+      ` : ""}
+    </main>
+  `;
+}
+
+function bindFeedbackEvents() {
+  document.querySelectorAll(".fb-chip[data-fb]").forEach((chip) => {
+    chip.addEventListener("click", (e) => {
+      if (e.target.classList.contains("chip-del")) return;
+      const type = chip.dataset.fb;
+      const val = chip.dataset.val;
+      let arr;
+      if (type === "strength") arr = state.feedback.strengths;
+      else if (type === "weakness") arr = state.feedback.weaknesses;
+      else arr = state.feedback.homework;
+
+      const idx = arr.indexOf(val);
+      if (idx >= 0) arr.splice(idx, 1);
+      else {
+        if (type === "weakness" && arr.length >= 2) return;
+        arr.push(val);
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll(".chip-del[data-fb]").forEach((del) => {
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const type = del.dataset.fb.replace("del-", "");
+      const val = del.dataset.val;
+      if (type === "strength") state.feedback.customStrengths = state.feedback.customStrengths.filter((s) => s !== val);
+      else if (type === "weakness") state.feedback.customWeaknesses = state.feedback.customWeaknesses.filter((s) => s !== val);
+      else state.feedback.customHomework = state.feedback.customHomework.filter((s) => s !== val);
+      state.feedback.strengths = state.feedback.strengths.filter((s) => s !== val);
+      state.feedback.weaknesses = state.feedback.weaknesses.filter((s) => s !== val);
+      state.feedback.homework = state.feedback.homework.filter((s) => s !== val);
+      render();
+    });
+  });
+
+  ["fbCustomStrength", "fbCustomWeakness", "fbCustomHomework"].forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const val = input.value.trim();
+        if (!val) return;
+        if (id === "fbCustomStrength") {
+          if (!state.feedback.customStrengths.includes(val)) state.feedback.customStrengths.push(val);
+        } else if (id === "fbCustomWeakness") {
+          if (!state.feedback.customWeaknesses.includes(val)) state.feedback.customWeaknesses.push(val);
+        } else {
+          if (!state.feedback.customHomework.includes(val)) state.feedback.customHomework.push(val);
+        }
+        input.value = "";
+        render();
+      }
+    });
+  });
+
+  document.getElementById("fbGenerate")?.addEventListener("click", () => {
+    syncFeedbackFromForm();
+    generateFeedbackMessage();
+    render();
+  });
+
+  document.getElementById("fbCopy")?.addEventListener("click", () => {
+    const msg = document.getElementById("fbMessage")?.innerText;
+    if (msg) navigator.clipboard.writeText(msg).then(() => alert("已复制到剪贴板"));
+  });
+}
+
+function syncFeedbackFromForm() {
+  const fb = state.feedback;
+  fb.date = document.getElementById("fbDate")?.value || fb.date;
+  fb.time = document.getElementById("fbTime")?.value || "";
+  fb.student = document.getElementById("fbStudent")?.value || "";
+  fb.content = document.getElementById("fbContent")?.value || "";
+  fb.evaluation = document.getElementById("fbEvaluation")?.value || "";
+  fb.nextLesson = document.getElementById("fbNextLesson")?.value || "";
+}
+
+function generateFeedbackMessage() {
+  const fb = state.feedback;
+  const lines = [];
+  const salutation = fb.student ? `${fb.student}家长您好` : "家长您好";
+  lines.push(`${salutation}，今天的课程结束了，这是今天的课堂反馈：`);
+  
+  if (fb.date || fb.time) {
+    const parts = [];
+    if (fb.date) parts.push(fb.date);
+    if (fb.time) parts.push(fb.time);
+    lines.push(`\n上课时间：${parts.join(" ")}`);
+  }
+
+  if (fb.content.trim()) {
+    lines.push("\n📖 课堂内容：");
+    fb.content.split("\n").filter(Boolean).forEach((line, i) => {
+      lines.push(`   ${i + 1}. ${line.trim()}`);
+    });
+  }
+
+  const allStrengths = [...fb.strengths, ...fb.customStrengths];
+  if (allStrengths.length) {
+    lines.push(`\n✅ 课堂表现：${allStrengths.join("、")}。`);
+  }
+
+  const allWeaknesses = [...fb.weaknesses, ...fb.customWeaknesses];
+  if (allWeaknesses.length) {
+    lines.push(`\n⚠️ 需要注意：${allWeaknesses.join("、")}。`);
+  }
+
+  if (fb.evaluation.trim()) {
+    lines.push(`\n💬 课程反馈：${fb.evaluation.trim()}`);
+  }
+
+  const allHomework = [...fb.homework, ...fb.customHomework];
+  if (allHomework.length) {
+    lines.push("\n📝 课后作业：");
+    allHomework.forEach((h, i) => {
+      lines.push(`   ${i + 1}. ${h}`);
+    });
+  }
+
+  if (fb.nextLesson.trim()) {
+    lines.push(`\n📅 下节课计划：${fb.nextLesson.trim()}`);
+  }
+
+  fb.generated = lines.join("\n");
+}
+
 function render() {
   const filteredRecords = getFilteredRecords();
   const selected = getSelectedRecord(filteredRecords);
@@ -826,6 +1048,11 @@ function render() {
   const evalSplit = splitEvaluation(selected?.evaluation || "");
 
   root.innerHTML = `
+    <nav class="tab-nav">
+      <button class="tab-btn ${state.activeTab === "archive" ? "active" : ""}" data-tab="archive">📋 学生档案</button>
+      <button class="tab-btn ${state.activeTab === "feedback" ? "active" : ""}" data-tab="feedback">✉️ 家长反馈</button>
+    </nav>
+    ${state.activeTab === "archive" ? `
     <main class="app-shell">
       <section class="workspace">
         <aside class="sidebar">
@@ -1028,10 +1255,12 @@ function render() {
         </section>
       </section>
     </main>
+    ` : renderFeedbackTab()}
     ${renderPrintSheet(selected)}
   `;
 
   bindEvents();
+  if (state.activeTab === "feedback") bindFeedbackEvents();
 }
 
 function syncDraftFromForm(form) {
@@ -1051,6 +1280,13 @@ function syncDraftFromForm(form) {
 }
 
 function bindEvents() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.activeTab = btn.dataset.tab;
+      render();
+    });
+  });
+
   document.getElementById("queryInput")?.addEventListener("compositionstart", () => {
     state.composing = true;
   });
