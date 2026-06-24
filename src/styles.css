@@ -244,6 +244,47 @@ button {
   font-weight: 600;
 }
 
+/* Status chip buttons */
+.status-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  grid-column: span 4;
+  margin-bottom: 4px;
+}
+
+.status-buttons span {
+  color: #3a4149;
+  font-size: 13px;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.status-chip {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid #d8d0c2;
+  border-radius: 99px;
+  background: #fffdfa;
+  color: #4d555d;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.status-chip:hover {
+  border-color: #2e718d;
+  color: #1f4d5c;
+}
+
+.status-chip.active {
+  border-color: #2e718d;
+  background: #e5edf2;
+  color: #245c7d;
+}
+
 /* Record item with checkbox */
 .record-item {
   display: flex;
@@ -1058,10 +1099,10 @@ body.print-previewing .print-sheet {
   margin: 0;
 }
 
-.story-grid {
+.story-flow {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .story-block {
@@ -1075,7 +1116,7 @@ body.print-previewing .print-sheet {
   background: #f8f4ed;
 }
 
-.story-block.primary {
+.story-block {
   background: #eef4f1;
 }
 
@@ -1108,7 +1149,7 @@ body.print-previewing .print-sheet {
   }
 
   .metric-grid,
-  .story-grid {
+  .story-flow {
     grid-template-columns: 1fr;
   }
 

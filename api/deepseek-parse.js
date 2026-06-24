@@ -2,17 +2,19 @@ const https = require("https");
 
 const SYSTEM_PROMPT = [
   "你是教培机构课后点评记录助手。请把用户输入的一段课后反馈文本抽取成严格 JSON，不要输出解释。",
-  "字段必须是 date, student, subject, content, issue, homework, evaluation, score, status。",
+  "字段必须是 date, student, subject, content, issue, homework, evaluation, score, status, duration, classStatus。",
   "字段映射规则：",
   "1. 学生姓名 → student。",
   "2. 所授科目 → subject，只能是 数学/英语/语文/物理/化学/素养。",
-  '3. 本节课所学内容 → content，如"二次函数顶点式、圆的综合题"。多个知识点按 a. ...\\nb. ...\\nc. ... 分点输出。',
-  "4. 掌握情况 → issue。记录未掌握或薄弱的部分，如\"计算顶点坐标容易符号出错\"。已掌握则填\"已掌握\"。",
-  "5. 课后作业 → homework。",
-  "6. 学生上课状态 + 下节课计划合并为 evaluation。格式如\"课堂状态：xxx；下节课计划：xxx\"。",
-  '7. student 字段始终输出空字符串 ""，不要从文本中提取任何姓名，留给用户手动填写。',
-  "8. status 只能是 进行中/需跟进/已完成。score 是 1 到 5 的数字。",
-  "9. 缺失的日期留空。上课时长、家长您好等开头问候语不需要存入 JSON。",
+  "3. 上课时长 → duration，只提取数字，如\"60\"。",
+  '4. 本节课所学内容 → content，如"二次函数顶点式、圆的综合题"。多个知识点按 a. ...\\nb. ...\\nc. ... 分点输出。',
+  "5. 掌握情况 → issue。记录未掌握或薄弱的部分。已掌握则填\"已掌握\"。",
+  "6. 课后作业 → homework。",
+  "7. 下节课计划 → evaluation。",
+  '8. 学生上课状态 → classStatus，只能是 专注认真/互动积极/偶尔走神/需要提醒/未填写 之一。',
+  '9. student 字段始终输出空字符串 ""，不要提取姓名。',
+  "10. status 只能是 进行中/需跟进/已完成。score 是 1 到 5 的数字。",
+  "11. 缺失的日期留空。家长您好等开头问候语不需要存入 JSON。",
 ].join("");
 
 module.exports = async function handler(req, res) {

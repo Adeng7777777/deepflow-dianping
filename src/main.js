@@ -5,6 +5,8 @@ const initialRecords = [
     student: "林可",
     subject: "数学",
     grade: "DP1",
+    duration: "60",
+    classStatus: "专注认真",
     content: "一次函数图像与实际应用题，重点训练斜率、截距和条件提取。",
     issue: "读题时容易漏掉单位换算，列式后没有主动检查变量含义。",
     homework: "完成一次函数应用题 12 题，整理 3 道错题的题眼和订正步骤。",
@@ -18,6 +20,8 @@ const initialRecords = [
     student: "周安",
     subject: "英语",
     grade: "DP2",
+    duration: "45",
+    classStatus: "互动积极",
     content: "阅读理解主旨题和细节题区分，练习定位关键词与段落归纳。",
     issue: "能找到原文信息，但表达答案时句子不够完整。",
     homework: "精读一篇 300 词短文，标注主题句，完成 5 个完整句回答。",
@@ -31,6 +35,8 @@ const initialRecords = [
     student: "陈一诺",
     subject: "语文",
     grade: "MYP5",
+    duration: "90",
+    classStatus: "专注认真",
     content: "记叙文人物描写赏析，拆解动作、语言、心理描写的作用。",
     issue: "答题能说出方向，但缺少结合文本的具体词句。",
     homework: "完成两篇阅读赏析题，每题按观点、文本、效果三步作答。",
@@ -70,6 +76,8 @@ function createEmptyDraft() {
     student: "",
     subject: "数学",
     grade: "",
+    duration: "",
+    classStatus: "",
     content: "",
     issue: "",
     homework: "",
@@ -192,6 +200,17 @@ function paragraphList(value, fallback) {
     .filter(Boolean)
     .map((line) => `<p>${escapeHtml(line)}</p>`)
     .join("");
+}
+
+function splitEvaluation(evalText) {
+  const text = String(evalText || "");
+  const cleaned = text.replace(/^课堂状态[：:]\s*/, "").replace(/[；;]\s*下节课[计划继续学习内容]*[：:]?\s*/g, "").trim();
+  const parts = text.split(/[；;]\s*下节课/);
+  const nextPlan = parts.length > 1 ? parts[1].replace(/^(计划|继续学习内容)[：:]\s*/, "").trim() : cleaned;
+  if (parts.length <= 1 && text.includes("课堂状态")) {
+    return { nextPlan: "" };
+  }
+  return { nextPlan };
 }
 
 function drawRoundRect(ctx, x, y, width, height, radius) {
@@ -364,6 +383,8 @@ function normalizeRecords(records) {
       student: String(record.student || ""),
       subject: String(record.subject || "数学").trim() || "数学",
       grade: String(record.grade || ""),
+      duration: String(record.duration || ""),
+      classStatus: String(record.classStatus || ""),
       content: String(record.content || ""),
       issue: String(record.issue || "暂无明显问题，继续观察课堂表现和作业完成度。"),
       homework: String(record.homework || "本次未布置额外作业。"),
@@ -531,6 +552,9 @@ function parseRawNote(rawText) {
 
   const dateMatch = text.match(/\d{4}-\d{1,2}-\d{1,2}/);
 
+  const durationMatch = text.match(/上课时长[：:]\s*(\d+)\s*分/);
+  const duration = durationMatch ? durationMatch[1] : "";
+
   const content = cleanField(sections.content) ||
     extractByLabel(text, "本节课所学内容") ||
     text;
@@ -557,6 +581,8 @@ function parseRawNote(rawText) {
     student: "",
     subject: pickSubject(text, state.draft.subject),
     grade: "",
+    duration,
+    classStatus: "",
     content: splitItems(content),
     issue: mastery ? splitItems(mastery) : "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: homework ? splitItems(homework) : "本次未布置额外作业。",
@@ -601,6 +627,8 @@ function normalizeAiRecord(data, rawText) {
     student: "",
     subject,
     grade: "",
+    duration: String(data.duration || fallback.duration || ""),
+    classStatus: String(data.classStatus || ""),
     content: splitItems(String(data.content || fallback.content || "").trim()),
     issue: splitItems(String(data.issue || fallback.issue || "").trim()),
     homework: splitItems(String(data.homework || fallback.homework || "").trim()),
@@ -647,6 +675,8 @@ function createRecordFromDraft() {
     student,
     subject: state.draft.subject,
     grade: state.draft.grade || "",
+    duration: state.draft.duration || "",
+    classStatus: state.draft.classStatus || "",
     content,
     issue: state.draft.issue.trim() || "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: state.draft.homework.trim() || "本次未布置额外作业。",
@@ -666,6 +696,8 @@ function startEditingSelectedRecord() {
     student: record.student,
     subject: record.subject,
     grade: record.grade || "",
+    duration: record.duration || "",
+    classStatus: record.classStatus || "",
     content: record.content,
     issue: record.issue,
     homework: record.homework,
@@ -762,6 +794,7 @@ function render() {
   const filteredRecords = getFilteredRecords();
   const selected = getSelectedRecord(filteredRecords);
   const selectedScore = selected?.score || 0;
+  const evalSplit = splitEvaluation(selected?.evaluation || "");
 
   root.innerHTML = `
     <main class="app-shell">
@@ -850,6 +883,8 @@ function render() {
             <div class="record-meta">
               <span>${escapeHtml(selected?.subject || "-")}</span>
               ${selected?.grade ? `<span>${escapeHtml(selected.grade)}</span>` : ""}
+              ${selected?.duration ? `<span>${escapeHtml(selected.duration)}分钟</span>` : ""}
+              ${selected?.classStatus ? `<span class="meta-status">${escapeHtml(selected.classStatus)}</span>` : ""}
               <span>评价 ${selected ? selected.score.toFixed(1) : "-"}/5.0</span>
             </div>
 
@@ -861,8 +896,8 @@ function render() {
               <b>${selected ? selected.score.toFixed(1) : "-"}</b>
             </div>
 
-            <div class="story-grid">
-              <article class="story-block primary">
+            <div class="story-flow">
+              <article class="story-block">
                 <small>本节课所学内容</small>
                 ${paragraphList(selected?.content, "暂无内容")}
               </article>
@@ -874,9 +909,13 @@ function render() {
                 <small>课后作业</small>
                 ${paragraphList(selected?.homework, "暂无作业")}
               </article>
-              <article class="story-block primary">
-                <small>综合评价</small>
-                ${paragraphList(selected?.evaluation, "暂无评价")}
+              <article class="story-block">
+                <small>课堂状态</small>
+                ${selected?.classStatus ? `<p>${escapeHtml(selected.classStatus)}</p>` : `<p>暂无记录</p>`}
+              </article>
+              <article class="story-block">
+                <small>下节课继续学习内容</small>
+                ${paragraphList(evalSplit.nextPlan, "暂无记录")}
               </article>
             </div>
           </section>
@@ -912,7 +951,7 @@ function render() {
                   <p>上课时长：x分钟</p>
                   <p>学生姓名：xxx</p>
                   <p>所授科目：</p>
-                  <p>学生上课状态：<em>如：专注认真、互动积极、偶尔走神、需要提醒</em></p>
+                  <p>学生上课状态：<em>下方按钮点选</em></p>
                   <p>本节课所学内容：<em>如：二次函数顶点式、圆的综合题</em></p>
                   <p>掌握情况：<em>如：已掌握、部分掌握（具体薄弱点）、未掌握</em></p>
                   <p>课后作业：<em>如：完成练习册第x页、整理错题</em></p>
@@ -931,6 +970,7 @@ function render() {
               <input name="student" value="${escapeHtml(state.draft.student)}" placeholder="学生姓名" />
               <input name="subject" value="${escapeHtml(state.draft.subject)}" placeholder="科目" />
               <input name="grade" value="${escapeHtml(state.draft.grade)}" placeholder="年级（如DP1、高一）" list="gradeList" autocomplete="off" />
+              <input name="duration" value="${escapeHtml(state.draft.duration)}" placeholder="上课时长（分钟）" type="number" min="1" max="240" />
               <datalist id="gradeList">
                 <option value="DP1"><option value="DP2"><option value="MYP4"><option value="MYP5">
                 <option value="高一"><option value="高二"><option value="高三">
@@ -941,6 +981,13 @@ function render() {
                 <span>对应评价 <output id="scoreOutput">${escapeHtml(state.draft.score)}</output></span>
                 <input name="score" type="range" min="1" max="5" step="0.1" value="${escapeHtml(state.draft.score)}" />
               </label>
+              <div class="status-buttons">
+                <span>课堂状态</span>
+                ${["专注认真", "互动积极", "偶尔走神", "需要提醒"].map((s) => `
+                  <button class="status-chip ${state.draft.classStatus === s ? "active" : ""}" type="button" data-status="${s}">${s}</button>
+                `).join("")}
+              </div>
+              <input type="hidden" name="classStatus" value="${escapeHtml(state.draft.classStatus)}" />
               <textarea name="content" placeholder="本节课所学内容">${escapeHtml(state.draft.content)}</textarea>
               <textarea name="issue" placeholder="掌握情况">${escapeHtml(state.draft.issue)}</textarea>
               <textarea name="homework" placeholder="课后作业">${escapeHtml(state.draft.homework)}</textarea>
@@ -966,6 +1013,8 @@ function syncDraftFromForm(form) {
   state.draft.student = String(formData.get("student") || "");
   state.draft.subject = String(formData.get("subject") || "").trim() || "数学";
   state.draft.grade = String(formData.get("grade") || "").trim();
+  state.draft.duration = String(formData.get("duration") || "").trim();
+  state.draft.classStatus = String(formData.get("classStatus") || "");
   state.draft.status = String(formData.get("status") || state.draft.status || "进行中");
   state.draft.score = String(formData.get("score") || "4.5");
   state.draft.content = String(formData.get("content") || "");
@@ -1010,6 +1059,13 @@ function bindEvents() {
     state.groupBy = event.target.value;
     state.batchSelectedIds.clear();
     render();
+  });
+
+  document.querySelectorAll(".status-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      state.draft.classStatus = chip.dataset.status;
+      render();
+    });
   });
 
   document.getElementById("selectAllCheckbox")?.addEventListener("change", (event) => {
