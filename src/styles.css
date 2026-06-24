@@ -404,6 +404,17 @@ button {
   outline: none;
 }
 
+.fb-row select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d8d0c2;
+  border-radius: 8px;
+  background: #fffdfa;
+  color: #252a30;
+  outline: none;
+  font: inherit;
+}
+
 .fb-section h3 {
   margin: 0 0 10px;
   font-size: 16px;

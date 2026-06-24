@@ -71,7 +71,9 @@ const state = {
   feedback: {
     date: new Date().toISOString().slice(0, 10),
     time: "",
+    durations: [],
     student: "",
+    subject: "数学",
     content: "",
     strengths: [],
     weaknesses: [],
@@ -851,8 +853,19 @@ function renderFeedbackTab() {
 
         <div class="fb-row">
           <label>日期 <input id="fbDate" type="date" value="${escapeHtml(fb.date)}" /></label>
-          <label>上课时间 <input id="fbTime" type="text" value="${escapeHtml(fb.time)}" placeholder="如 8:00-10:00" /></label>
+          <label>科目
+            <select id="fbSubject">
+              ${["数学","英语","语文","物理","化学","素养"].map((s) => `<option value="${s}" ${fb.subject === s ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
+          </label>
           <label>学生姓名 <input id="fbStudent" type="text" value="${escapeHtml(fb.student)}" placeholder="张三" /></label>
+        </div>
+
+        <div class="fb-section">
+          <h3>⏱️ 上课时长 <small>（可多选）</small></h3>
+          <div class="fb-chips">
+            ${["30分钟", "60分钟", "90分钟", "120分钟"].map((d) => `<button class="fb-chip ${fb.durations.includes(d) ? "active" : ""}" data-fb="duration" data-val="${d}">${d}</button>`).join("")}
+          </div>
         </div>
 
         <div class="fb-section">
@@ -922,13 +935,16 @@ function bindFeedbackEvents() {
       let arr;
       if (type === "strength") arr = state.feedback.strengths;
       else if (type === "weakness") arr = state.feedback.weaknesses;
-      else arr = state.feedback.homework;
+      else if (type === "homework") arr = state.feedback.homework;
+      else if (type === "duration") arr = state.feedback.durations;
+      else return;
 
       const idx = arr.indexOf(val);
       if (idx >= 0) arr.splice(idx, 1);
       else {
         if (type === "weakness" && arr.length >= 2) return;
-        arr.push(val);
+        if (type === "duration") state.feedback.durations = [val];
+        else arr.push(val);
       }
       render();
     });
@@ -985,7 +1001,7 @@ function bindFeedbackEvents() {
 function syncFeedbackFromForm() {
   const fb = state.feedback;
   fb.date = document.getElementById("fbDate")?.value || fb.date;
-  fb.time = document.getElementById("fbTime")?.value || "";
+  fb.subject = document.getElementById("fbSubject")?.value || "数学";
   fb.student = document.getElementById("fbStudent")?.value || "";
   fb.content = document.getElementById("fbContent")?.value || "";
   fb.evaluation = document.getElementById("fbEvaluation")?.value || "";
@@ -997,13 +1013,11 @@ function generateFeedbackMessage() {
   const lines = [];
   const salutation = fb.student ? `${fb.student}家长您好` : "家长您好";
   lines.push(`${salutation}，今天的课程结束了，这是今天的课堂反馈：`);
-  
-  if (fb.date || fb.time) {
-    const parts = [];
-    if (fb.date) parts.push(fb.date);
-    if (fb.time) parts.push(fb.time);
-    lines.push(`\n上课时间：${parts.join(" ")}`);
-  }
+
+  const parts = [];
+  if (fb.date) parts.push(fb.date);
+  if (fb.durations.length) parts.push(`上课时长${fb.durations.join("+")}`);
+  if (parts.length) lines.push(`\n上课时间：${parts.join("  ")}`);
 
   if (fb.content.trim()) {
     lines.push("\n📖 课堂内容：");
@@ -1039,6 +1053,28 @@ function generateFeedbackMessage() {
   }
 
   fb.generated = lines.join("\n");
+
+  // 自动存入学生档案
+  if (fb.student.trim() && fb.content.trim()) {
+    const record = {
+      id: Date.now(),
+      date: fb.date,
+      student: fb.student.trim(),
+      subject: fb.subject,
+      grade: "",
+      duration: fb.durations.map((d) => d.replace("分钟", "")).join("+"),
+      classStatuses: allStrengths.slice(0, 2),
+      content: fb.content.trim(),
+      issue: allWeaknesses.join("、") || "暂无记录",
+      homework: allHomework.join("；") || "未布置",
+      evaluation: [fb.evaluation.trim(), fb.nextLesson.trim() ? `下节课：${fb.nextLesson.trim()}` : ""].filter(Boolean).join(" ") || "暂无评价",
+      score: 4.5,
+      status: "已完成",
+    };
+    state.records = [record, ...state.records];
+    state.selectedId = record.id;
+    persistRecords();
+  }
 }
 
 function render() {
@@ -1059,8 +1095,8 @@ function render() {
           <div class="brand">
             <span class="brand-mark">${icon("book")}</span>
             <div>
-              <h1>课后点评台</h1>
-              <p>学生反馈、作业记录、评价沉淀</p>
+              <h1>学生记录档案</h1>
+              <p>学生成长记录、成绩跟踪、查缺补漏</p>
             </div>
           </div>
 
@@ -1112,9 +1148,9 @@ function render() {
         <section class="content">
           <header class="topbar hero-panel">
             <div>
-              <span class="eyebrow">${icon("spark")}课后反馈工作台</span>
-              <h2>${escapeHtml(selected?.student || "暂无记录")}的课堂复盘</h2>
-              <p>把学习内容、课堂问题、作业安排和评价建议放在同一张清晰的记录卡里。</p>
+              <span class="eyebrow">${icon("spark")}学生成长档案</span>
+              <h2>${escapeHtml(selected?.student || "暂无记录")}的学习记录</h2>
+              <p>课堂内容、掌握情况、作业表现、成长轨迹一目了然。</p>
               <small class="storage-status">${escapeHtml(state.storageStatus)}</small>
             </div>
             <div class="topbar-actions">
