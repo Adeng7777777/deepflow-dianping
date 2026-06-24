@@ -6,7 +6,7 @@ const initialRecords = [
     subject: "数学",
     grade: "DP1",
     duration: "60",
-    classStatus: "专注认真",
+    classStatuses: ["专注认真"],
     content: "一次函数图像与实际应用题，重点训练斜率、截距和条件提取。",
     issue: "读题时容易漏掉单位换算，列式后没有主动检查变量含义。",
     homework: "完成一次函数应用题 12 题，整理 3 道错题的题眼和订正步骤。",
@@ -21,7 +21,7 @@ const initialRecords = [
     subject: "英语",
     grade: "DP2",
     duration: "45",
-    classStatus: "互动积极",
+    classStatuses: ["互动积极"],
     content: "阅读理解主旨题和细节题区分，练习定位关键词与段落归纳。",
     issue: "能找到原文信息，但表达答案时句子不够完整。",
     homework: "精读一篇 300 词短文，标注主题句，完成 5 个完整句回答。",
@@ -36,7 +36,7 @@ const initialRecords = [
     subject: "语文",
     grade: "MYP5",
     duration: "90",
-    classStatus: "专注认真",
+    classStatuses: ["专注认真"],
     content: "记叙文人物描写赏析，拆解动作、语言、心理描写的作用。",
     issue: "答题能说出方向，但缺少结合文本的具体词句。",
     homework: "完成两篇阅读赏析题，每题按观点、文本、效果三步作答。",
@@ -79,7 +79,7 @@ function createEmptyDraft() {
     subject: "数学",
     grade: "",
     duration: "",
-    classStatus: "",
+    classStatuses: [],
     content: "",
     issue: "",
     homework: "",
@@ -114,6 +114,16 @@ function saveClassStatusOptions(options) {
   const custom = options.filter((s) => !defaults.includes(s));
   localStorage.setItem("classStatusCustom", JSON.stringify(custom));
   state.classStatusOptions = [...defaults, ...custom];
+}
+
+function toStatusArray(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim()) return value.split(/[,，、\s]+/).filter(Boolean);
+  return [];
+}
+
+function statusArrayToString(arr) {
+  return Array.isArray(arr) ? arr.filter(Boolean).join("，") : "";
 }
 
 function icon(name) {
@@ -403,7 +413,7 @@ function normalizeRecords(records) {
       subject: String(record.subject || "数学").trim() || "数学",
       grade: String(record.grade || ""),
       duration: String(record.duration || ""),
-      classStatus: String(record.classStatus || ""),
+      classStatuses: toStatusArray(record.classStatuses || record.classStatus || ""),
       content: String(record.content || ""),
       issue: String(record.issue || "暂无明显问题，继续观察课堂表现和作业完成度。"),
       homework: String(record.homework || "本次未布置额外作业。"),
@@ -601,7 +611,7 @@ function parseRawNote(rawText) {
     subject: pickSubject(text, state.draft.subject),
     grade: "",
     duration,
-    classStatus: "",
+    classStatuses: [],
     content: splitItems(content),
     issue: mastery ? splitItems(mastery) : "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: homework ? splitItems(homework) : "本次未布置额外作业。",
@@ -647,7 +657,7 @@ function normalizeAiRecord(data, rawText) {
     subject,
     grade: "",
     duration: String(data.duration || fallback.duration || ""),
-    classStatus: String(data.classStatus || ""),
+    classStatuses: toStatusArray(data.classStatuses || data.classStatus || ""),
     content: splitItems(String(data.content || fallback.content || "").trim()),
     issue: splitItems(String(data.issue || fallback.issue || "").trim()),
     homework: splitItems(String(data.homework || fallback.homework || "").trim()),
@@ -695,7 +705,7 @@ function createRecordFromDraft() {
     subject: state.draft.subject,
     grade: state.draft.grade || "",
     duration: state.draft.duration || "",
-    classStatus: state.draft.classStatus || "",
+    classStatuses: [...(state.draft.classStatuses || [])],
     content,
     issue: state.draft.issue.trim() || "暂无明显问题，继续观察课堂表现和作业完成度。",
     homework: state.draft.homework.trim() || "本次未布置额外作业。",
@@ -716,7 +726,7 @@ function startEditingSelectedRecord() {
     subject: record.subject,
     grade: record.grade || "",
     duration: record.duration || "",
-    classStatus: record.classStatus || "",
+    classStatuses: toStatusArray(record.classStatuses || record.classStatus || ""),
     content: record.content,
     issue: record.issue,
     homework: record.homework,
@@ -903,7 +913,7 @@ function render() {
               <span>${escapeHtml(selected?.subject || "-")}</span>
               ${selected?.grade ? `<span>${escapeHtml(selected.grade)}</span>` : ""}
               ${selected?.duration ? `<span>${escapeHtml(selected.duration)}分钟</span>` : ""}
-              ${selected?.classStatus ? `<span class="meta-status">${escapeHtml(selected.classStatus)}</span>` : ""}
+              ${(selected?.classStatuses || []).length ? `<span class="meta-status">${selected.classStatuses.join(" · ")}</span>` : ""}
               <span>评价 ${selected ? selected.score.toFixed(1) : "-"}/5.0</span>
             </div>
 
@@ -919,10 +929,7 @@ function render() {
               <article class="story-block">
                 <small>本节课所学内容</small>
                 ${paragraphList(selected?.content, "暂无内容")}
-              </article>
-              <article class="story-block">
-                <small>掌握情况</small>
-                ${paragraphList(selected?.issue, "暂无反馈")}
+                ${selected?.issue && selected.issue !== "暂无反馈" ? `<div class="mastery-note"><small>掌握情况</small>${paragraphList(selected.issue, "")}</div>` : ""}
               </article>
               <article class="story-block">
                 <small>课后作业</small>
@@ -930,7 +937,7 @@ function render() {
               </article>
               <article class="story-block">
                 <small>课堂状态</small>
-                ${selected?.classStatus ? `<p>${escapeHtml(selected.classStatus)}</p>` : `<p>暂无记录</p>`}
+                ${(selected?.classStatuses || []).length ? `<p>${(selected.classStatuses).map(s => escapeHtml(s)).join(" · ")}</p>` : `<p>暂无记录</p>`}
               </article>
               <article class="story-block">
                 <small>下节课继续学习内容</small>
@@ -1003,11 +1010,11 @@ function render() {
               <div class="status-buttons">
                 <span>课堂状态</span>
                 ${state.classStatusOptions.map((s) => `
-                  <button class="status-chip ${state.draft.classStatus === s ? "active" : ""}" type="button" data-status="${escapeHtml(s)}">${escapeHtml(s)}${!["专注认真","互动积极","偶尔走神","需要提醒"].includes(s) ? `<i class="chip-del" data-del="${escapeHtml(s)}">×</i>` : ""}</button>
+                  <button class="status-chip ${(state.draft.classStatuses || []).includes(s) ? "active" : ""}" type="button" data-status="${escapeHtml(s)}">${escapeHtml(s)}${!["专注认真","互动积极","偶尔走神","需要提醒"].includes(s) ? `<i class="chip-del" data-del="${escapeHtml(s)}">×</i>` : ""}</button>
                 `).join("")}
                 <input class="status-add-input" value="${escapeHtml(state.newStatusInput)}" placeholder="+自定义" maxlength="8" />
               </div>
-              <input type="hidden" name="classStatus" value="${escapeHtml(state.draft.classStatus)}" />
+              <input type="hidden" name="classStatus" value="${(state.draft.classStatuses || []).join(",")}" />
               <textarea name="content" placeholder="本节课所学内容">${escapeHtml(state.draft.content)}</textarea>
               <textarea name="issue" placeholder="掌握情况">${escapeHtml(state.draft.issue)}</textarea>
               <textarea name="homework" placeholder="课后作业">${escapeHtml(state.draft.homework)}</textarea>
@@ -1034,7 +1041,7 @@ function syncDraftFromForm(form) {
   state.draft.subject = String(formData.get("subject") || "").trim() || "数学";
   state.draft.grade = String(formData.get("grade") || "").trim();
   state.draft.duration = String(formData.get("duration") || "").trim();
-  state.draft.classStatus = String(formData.get("classStatus") || "");
+  state.draft.classStatuses = (formData.get("classStatus") || "").split(",").filter(Boolean);
   state.draft.status = String(formData.get("status") || state.draft.status || "进行中");
   state.draft.score = String(formData.get("score") || "4.5");
   state.draft.content = String(formData.get("content") || "");
@@ -1084,7 +1091,12 @@ function bindEvents() {
   document.querySelectorAll(".status-chip").forEach((chip) => {
     chip.addEventListener("click", (event) => {
       if (event.target.classList.contains("chip-del")) return;
-      state.draft.classStatus = chip.dataset.status;
+      const status = chip.dataset.status;
+      const arr = [...(state.draft.classStatuses || [])];
+      const idx = arr.indexOf(status);
+      if (idx >= 0) arr.splice(idx, 1);
+      else arr.push(status);
+      state.draft.classStatuses = arr;
       render();
     });
   });
@@ -1095,7 +1107,9 @@ function bindEvents() {
       const toRemove = del.dataset.del;
       state.classStatusOptions = state.classStatusOptions.filter((s) => s !== toRemove);
       saveClassStatusOptions(state.classStatusOptions);
-      if (state.draft.classStatus === toRemove) state.draft.classStatus = "";
+      if (state.draft.classStatuses && state.draft.classStatuses.includes(toRemove)) {
+        state.draft.classStatuses = state.draft.classStatuses.filter((s) => s !== toRemove);
+      }
       render();
     });
   });

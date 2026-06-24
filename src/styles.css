@@ -1171,6 +1171,24 @@ body.print-previewing .print-sheet {
   font-size: 16px;
 }
 
+.mastery-note {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #d8d0c2;
+}
+
+.mastery-note small {
+  display: block;
+  margin-bottom: 4px;
+  color: #6f4a39;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.mastery-note p {
+  font-size: 15px;
+}
+
 .form-panel {
   background: #fffdfa;
 }
