@@ -285,6 +285,45 @@ button {
   color: #245c7d;
 }
 
+.chip-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: transparent;
+  color: #999;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.chip-del:hover {
+  background: #d44c2f;
+  color: #fff;
+}
+
+.status-add-input {
+  width: 80px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed #c4beb6;
+  border-radius: 99px;
+  background: transparent;
+  color: #6a6f75;
+  font-size: 12px;
+  outline: none;
+}
+
+.status-add-input:focus {
+  border-color: #2e718d;
+  border-style: solid;
+}
+
 /* Record item with checkbox */
 .record-item {
   display: flex;

@@ -65,6 +65,8 @@ const state = {
   batchSelectedIds: new Set(),
   composing: false,
   groupBy: "无",
+  classStatusOptions: loadClassStatusOptions(),
+  newStatusInput: "",
   draft: createEmptyDraft()
 };
 
@@ -95,6 +97,23 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function loadClassStatusOptions() {
+  const defaults = ["专注认真", "互动积极", "偶尔走神", "需要提醒"];
+  try {
+    const custom = JSON.parse(localStorage.getItem("classStatusCustom") || "[]");
+    return [...defaults, ...custom.filter((s) => !defaults.includes(s))];
+  } catch {
+    return defaults;
+  }
+}
+
+function saveClassStatusOptions(options) {
+  const defaults = ["专注认真", "互动积极", "偶尔走神", "需要提醒"];
+  const custom = options.filter((s) => !defaults.includes(s));
+  localStorage.setItem("classStatusCustom", JSON.stringify(custom));
+  state.classStatusOptions = [...defaults, ...custom];
 }
 
 function icon(name) {
@@ -983,9 +1002,10 @@ function render() {
               </label>
               <div class="status-buttons">
                 <span>课堂状态</span>
-                ${["专注认真", "互动积极", "偶尔走神", "需要提醒"].map((s) => `
-                  <button class="status-chip ${state.draft.classStatus === s ? "active" : ""}" type="button" data-status="${s}">${s}</button>
+                ${state.classStatusOptions.map((s) => `
+                  <button class="status-chip ${state.draft.classStatus === s ? "active" : ""}" type="button" data-status="${escapeHtml(s)}">${escapeHtml(s)}${!["专注认真","互动积极","偶尔走神","需要提醒"].includes(s) ? `<i class="chip-del" data-del="${escapeHtml(s)}">×</i>` : ""}</button>
                 `).join("")}
+                <input class="status-add-input" value="${escapeHtml(state.newStatusInput)}" placeholder="+自定义" maxlength="8" />
               </div>
               <input type="hidden" name="classStatus" value="${escapeHtml(state.draft.classStatus)}" />
               <textarea name="content" placeholder="本节课所学内容">${escapeHtml(state.draft.content)}</textarea>
@@ -1062,10 +1082,40 @@ function bindEvents() {
   });
 
   document.querySelectorAll(".status-chip").forEach((chip) => {
-    chip.addEventListener("click", () => {
+    chip.addEventListener("click", (event) => {
+      if (event.target.classList.contains("chip-del")) return;
       state.draft.classStatus = chip.dataset.status;
       render();
     });
+  });
+
+  document.querySelectorAll(".chip-del").forEach((del) => {
+    del.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const toRemove = del.dataset.del;
+      state.classStatusOptions = state.classStatusOptions.filter((s) => s !== toRemove);
+      saveClassStatusOptions(state.classStatusOptions);
+      if (state.draft.classStatus === toRemove) state.draft.classStatus = "";
+      render();
+    });
+  });
+
+  const statusAddInput = document.querySelector(".status-add-input");
+  statusAddInput?.addEventListener("input", (event) => {
+    state.newStatusInput = event.target.value;
+  });
+
+  statusAddInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const val = state.newStatusInput.trim();
+      if (val && !state.classStatusOptions.includes(val)) {
+        state.classStatusOptions = [...state.classStatusOptions, val];
+        saveClassStatusOptions(state.classStatusOptions);
+      }
+      state.newStatusInput = "";
+      render();
+    }
   });
 
   document.getElementById("selectAllCheckbox")?.addEventListener("change", (event) => {
