@@ -513,6 +513,21 @@ button {
   background: #1d5470;
 }
 
+.fb-reset-btn {
+  height: 42px;
+  border: 1px solid #d8d0c2;
+  border-radius: 8px;
+  background: #fffdfa;
+  color: #6a6f75;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fb-reset-btn:hover {
+  background: #f0ebe0;
+}
+
 .feedback-output {
   display: grid;
   gap: 14px;

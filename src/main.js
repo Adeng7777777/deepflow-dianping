@@ -911,6 +911,7 @@ function renderFeedbackTab() {
         </div>
 
         <button id="fbGenerate" class="fb-generate-btn">✨ 生成家长消息</button>
+        <button id="fbReset" class="fb-reset-btn">🔄 重置表单</button>
       </section>
 
       ${fb.generated ? `
@@ -997,6 +998,26 @@ function bindFeedbackEvents() {
   document.getElementById("fbCopy")?.addEventListener("click", () => {
     const msg = document.getElementById("fbMessage")?.innerText;
     if (msg) navigator.clipboard.writeText(msg).then(() => alert("已复制到剪贴板"));
+  });
+
+  document.getElementById("fbReset")?.addEventListener("click", () => {
+    state.feedback = {
+      date: new Date().toISOString().slice(0, 10),
+      durations: [],
+      student: "",
+      subject: "数学",
+      content: "",
+      strengths: [],
+      weaknesses: [],
+      homework: [],
+      customStrengths: [],
+      customWeaknesses: [],
+      customHomework: [],
+      evaluation: "",
+      nextLesson: "",
+      generated: "",
+    };
+    render();
   });
 }
 
