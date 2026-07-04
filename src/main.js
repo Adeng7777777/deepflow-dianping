@@ -921,11 +921,13 @@ function renderScheduleTab() {
               <div class="sched-entries">
                 ${entries.map((e, i) => `
                   <div class="sched-entry" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
-                    <span class="sched-time">${escapeHtml(e.time)}</span>
-                    <span class="sched-student">${escapeHtml(e.student || "?")}</span>
-                    <span class="sched-content">${escapeHtml(e.content || "")}</span>
-                    ${state.schedule.showFees && e.fee ? `<span class="sched-fee">¥${e.fee}</span>` : ""}
-                    <i class="sched-del-entry" data-date="${dateStr}" data-idx="${i}">×</i>
+                    <div class="sched-entry-row">
+                      <span class="sched-time">${escapeHtml(e.time)}</span>
+                      <span class="sched-student">${escapeHtml(e.student || "?")}</span>
+                      ${state.schedule.showFees && e.fee ? `<span class="sched-fee">¥${e.fee}</span>` : ""}
+                      <i class="sched-del-entry" data-date="${dateStr}" data-idx="${i}">×</i>
+                    </div>
+                    <div class="sched-content">${escapeHtml(e.content || "")}</div>
                   </div>
                 `).join("")}
               </div>

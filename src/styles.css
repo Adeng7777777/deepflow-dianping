@@ -744,9 +744,8 @@ button {
 
 .sched-entry {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 3px;
+  flex-direction: column;
+  gap: 2px;
   padding: 4px 6px;
   border-radius: 4px;
   background: #e5edf2;
@@ -754,6 +753,12 @@ button {
   line-height: 1.4;
   position: relative;
   cursor: pointer;
+}
+
+.sched-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .sched-entry:hover .sched-del-entry {
@@ -774,10 +779,9 @@ button {
 
 .sched-content {
   color: #4d555d;
-  flex: 1;
-  min-width: 0;
   word-break: break-word;
   line-height: 1.35;
+  font-size: 11px;
 }
 
 .sched-del-entry {
