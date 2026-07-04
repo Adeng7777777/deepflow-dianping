@@ -918,7 +918,7 @@ function renderScheduleTab() {
               </div>
               <div class="sched-entries">
                 ${entries.map((e, i) => `
-                  <div class="sched-entry" data-date="${dateStr}" data-idx="${i}">
+                  <div class="sched-entry" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
                     <span class="sched-time">${escapeHtml(e.time)}</span>
                     <span class="sched-student">${escapeHtml(e.student || "?")}</span>
                     <span class="sched-content">${escapeHtml((e.content || "").slice(0, 8))}${(e.content || "").length > 8 ? "…" : ""}</span>
@@ -934,7 +934,7 @@ function renderScheduleTab() {
       ${state.schedule.editing ? `
       <div class="sched-modal-overlay" id="schedModalOverlay">
         <div class="sched-modal">
-          <h3>${state.schedule.editing} 添加课程</h3>
+          <h3>${state.schedule.editIdx != null ? "编辑" : "添加"}课程 — ${state.schedule.editing}</h3>
           <label>开始时间 <input id="schedTimeStart" type="time" value="${escapeHtml(state.schedule.editTimeStart || "")}" /></label>
           <label>结束时间 <input id="schedTimeEnd" type="time" value="${escapeHtml(state.schedule.editTimeEnd || "")}" /></label>
           <label>学生 <input id="schedStudent" type="text" value="${escapeHtml(state.schedule.editStudent || "")}" placeholder="学生姓名" /></label>
@@ -1300,7 +1300,12 @@ function bindScheduleEvents() {
     };
     if (!entry.time && !entry.student && !entry.content) return;
     if (!state.schedule[date]) state.schedule[date] = [];
-    state.schedule[date].push(entry);
+    if (state.schedule.editIdx != null) {
+      state.schedule[date][state.schedule.editIdx] = entry;
+      state.schedule.editIdx = null;
+    } else {
+      state.schedule[date].push(entry);
+    }
     state.schedule.editing = null;
     saveSchedule();
     render();
@@ -1308,14 +1313,72 @@ function bindScheduleEvents() {
 
   document.getElementById("schedCancel")?.addEventListener("click", () => {
     state.schedule.editing = null;
+    state.schedule.editIdx = null;
     render();
   });
 
   document.getElementById("schedModalOverlay")?.addEventListener("click", (e) => {
     if (e.target.id === "schedModalOverlay") {
       state.schedule.editing = null;
+      state.schedule.editIdx = null;
       render();
     }
+  });
+
+  // Click entry to edit
+  document.querySelectorAll(".sched-entry").forEach((entryEl) => {
+    entryEl.addEventListener("click", (e) => {
+      if (e.target.classList.contains("sched-del-entry")) return;
+      const date = entryEl.dataset.date;
+      const idx = Number(entryEl.dataset.idx);
+      const entry = state.schedule[date]?.[idx];
+      if (!entry) return;
+      state.schedule.editIdx = idx;
+      state.schedule.editing = date;
+      const times = (entry.time || "").split("-");
+      state.schedule.editTimeStart = times[0] || "";
+      state.schedule.editTimeEnd = times[1] || "";
+      state.schedule.editStudent = entry.student || "";
+      state.schedule.editContent = entry.content || "";
+      render();
+    });
+  });
+
+  // Drag to copy
+  let dragData = null;
+  document.querySelectorAll(".sched-entry[draggable]").forEach((el) => {
+    el.addEventListener("dragstart", (e) => {
+      dragData = { date: el.dataset.date, idx: Number(el.dataset.idx) };
+      e.dataTransfer.effectAllowed = "copy";
+      e.dataTransfer.setData("text/plain", "");
+      el.style.opacity = "0.4";
+    });
+    el.addEventListener("dragend", (e) => {
+      el.style.opacity = "1";
+    });
+  });
+
+  document.querySelectorAll(".sched-day:not(.empty)").forEach((dayEl) => {
+    dayEl.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      dayEl.style.background = "#dceef8";
+    });
+    dayEl.addEventListener("dragleave", () => {
+      dayEl.style.background = "";
+    });
+    dayEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dayEl.style.background = "";
+      if (!dragData) return;
+      const srcEntry = state.schedule[dragData.date]?.[dragData.idx];
+      if (!srcEntry) return;
+      const targetDate = dayEl.dataset.date;
+      if (!state.schedule[targetDate]) state.schedule[targetDate] = [];
+      state.schedule[targetDate].push({ ...srcEntry });
+      saveSchedule();
+      render();
+    });
   });
 }
 
