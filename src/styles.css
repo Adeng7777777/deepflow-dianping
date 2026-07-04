@@ -681,12 +681,13 @@ button {
 }
 
 .sched-day {
-  min-height: 110px;
-  padding: 6px;
+  min-height: 140px;
+  padding: 8px;
   background: #fffdfa;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  font-size: 12px;
 }
 
 .sched-day.empty {
@@ -743,14 +744,16 @@ button {
 
 .sched-entry {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 3px;
-  padding: 2px 4px;
+  padding: 4px 6px;
   border-radius: 4px;
   background: #e5edf2;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.4;
   position: relative;
+  cursor: pointer;
 }
 
 .sched-entry:hover .sched-del-entry {
@@ -772,9 +775,9 @@ button {
 .sched-content {
   color: #4d555d;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  word-break: break-word;
+  line-height: 1.35;
 }
 
 .sched-del-entry {
@@ -861,8 +864,7 @@ button {
 
 @media (max-width: 760px) {
   .sched-day {
-    min-height: 80px;
-    padding: 3px;
+    min-height: 100px;
   }
   .sched-entry {
     font-size: 10px;

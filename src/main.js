@@ -921,7 +921,7 @@ function renderScheduleTab() {
                   <div class="sched-entry" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
                     <span class="sched-time">${escapeHtml(e.time)}</span>
                     <span class="sched-student">${escapeHtml(e.student || "?")}</span>
-                    <span class="sched-content">${escapeHtml((e.content || "").slice(0, 8))}${(e.content || "").length > 8 ? "…" : ""}</span>
+                    <span class="sched-content">${escapeHtml(e.content || "")}</span>
                     <i class="sched-del-entry" data-date="${dateStr}" data-idx="${i}">×</i>
                   </div>
                 `).join("")}
