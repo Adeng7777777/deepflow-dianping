@@ -935,7 +935,8 @@ function renderScheduleTab() {
       <div class="sched-modal-overlay" id="schedModalOverlay">
         <div class="sched-modal">
           <h3>${state.schedule.editing} 添加课程</h3>
-          <label>时间 <input id="schedTime" type="text" value="${escapeHtml(state.schedule.editTime || "")}" placeholder="如 08:00-10:00" /></label>
+          <label>开始时间 <input id="schedTimeStart" type="time" value="${escapeHtml(state.schedule.editTimeStart || "")}" /></label>
+          <label>结束时间 <input id="schedTimeEnd" type="time" value="${escapeHtml(state.schedule.editTimeEnd || "")}" /></label>
           <label>学生 <input id="schedStudent" type="text" value="${escapeHtml(state.schedule.editStudent || "")}" placeholder="学生姓名" /></label>
           <label>内容 <input id="schedContent" type="text" value="${escapeHtml(state.schedule.editContent || "")}" placeholder="学习内容" /></label>
           <div class="sched-modal-actions">
@@ -1265,7 +1266,8 @@ function bindScheduleEvents() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       state.schedule.editing = btn.dataset.date;
-      state.schedule.editTime = "";
+      state.schedule.editTimeStart = "";
+      state.schedule.editTimeEnd = "";
       state.schedule.editStudent = "";
       state.schedule.editContent = "";
       render();
@@ -1288,8 +1290,11 @@ function bindScheduleEvents() {
 
   document.getElementById("schedSave")?.addEventListener("click", () => {
     const date = state.schedule.editing;
+    const startT = document.getElementById("schedTimeStart")?.value || "";
+    const endT = document.getElementById("schedTimeEnd")?.value || "";
+    const timeStr = startT && endT ? `${startT}-${endT}` : (startT || endT || "");
     const entry = {
-      time: document.getElementById("schedTime")?.value || "",
+      time: timeStr,
       student: document.getElementById("schedStudent")?.value || "",
       content: document.getElementById("schedContent")?.value || "",
     };
