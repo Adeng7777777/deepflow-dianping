@@ -909,7 +909,7 @@ function renderScheduleTab() {
           const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           const entries = (state.schedule[dateStr] || []).filter((e) =>
             state.schedule.viewMode !== "student" || !state.schedule.filterStudent || e.student === state.schedule.filterStudent
-          );
+          ).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
           const isToday = year === today.getFullYear() && month === today.getMonth() + 1 && d === today.getDate();
           const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0;
           return `
@@ -1389,6 +1389,7 @@ function bindScheduleEvents() {
       state.schedule.editIdx = null;
     } else {
       state.schedule[date].push(entry);
+    state.schedule[date].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
     }
     state.schedule.editing = null;
     saveSchedule();
@@ -1461,6 +1462,7 @@ function bindScheduleEvents() {
       const targetDate = dayEl.dataset.date;
       if (!state.schedule[targetDate]) state.schedule[targetDate] = [];
       state.schedule[targetDate].push({ ...srcEntry });
+      state.schedule[targetDate].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
       saveSchedule();
       render();
     });
