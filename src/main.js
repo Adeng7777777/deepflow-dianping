@@ -68,6 +68,7 @@ const state = {
   classStatusOptions: loadClassStatusOptions(),
   newStatusInput: "",
   activeTab: "archive",
+  schedule: loadSchedule(),
   feedback: {
     date: new Date().toISOString().slice(0, 10),
     time: "",
@@ -837,6 +838,103 @@ function renderRecordList(filteredRecords, selected) {
     .join("");
 }
 
+function loadSchedule() {
+  try {
+    const raw = localStorage.getItem("classSchedule");
+    const data = raw ? JSON.parse(raw) : {};
+    if (!data.year) {
+      const t = new Date();
+      data.year = t.getFullYear();
+      data.month = t.getMonth() + 1;
+    }
+    return data;
+  } catch {
+    const t = new Date();
+    return { year: t.getFullYear(), month: t.getMonth() + 1 };
+  }
+}
+
+function saveSchedule() {
+  localStorage.setItem("classSchedule", JSON.stringify(state.schedule));
+}
+
+function getMonthDays(year, month) {
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+  const startDow = firstDay.getDay();
+  const days = [];
+  for (let i = 0; i < startDow; i++) days.push(null);
+  for (let d = 1; d <= lastDay.getDate(); d++) days.push(d);
+  return days;
+}
+
+function renderScheduleTab() {
+  const today = new Date();
+  const year = state.schedule.year || today.getFullYear();
+  const month = state.schedule.month || today.getMonth() + 1;
+  const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+  const days = getMonthDays(year, month);
+  const weekHeaders = ["日", "一", "二", "三", "四", "五", "六"];
+
+  return `
+    <main class="schedule-app">
+      <header class="sched-header">
+        <button id="schedPrev" class="sched-nav">◀</button>
+        <h2>${year}年${month}月</h2>
+        <button id="schedNext" class="sched-nav">▶</button>
+        <button id="schedToday" class="sched-today">今天</button>
+      </header>
+
+      <div class="sched-weekdays">
+        ${weekHeaders.map((w) => `<span>${w}</span>`).join("")}
+      </div>
+
+      <div class="sched-grid">
+        ${days.map((d) => {
+          if (d === null) return `<div class="sched-day empty"></div>`;
+          const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          const entries = state.schedule[dateStr] || [];
+          const isToday = year === today.getFullYear() && month === today.getMonth() + 1 && d === today.getDate();
+          const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0;
+          return `
+            <div class="sched-day ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}" data-date="${dateStr}">
+              <div class="sched-day-num">
+                <span>${d}</span>
+                <button class="sched-add-btn" data-date="${dateStr}">+</button>
+              </div>
+              <div class="sched-entries">
+                ${entries.map((e, i) => `
+                  <div class="sched-entry" data-date="${dateStr}" data-idx="${i}">
+                    <span class="sched-time">${escapeHtml(e.time)}</span>
+                    <span class="sched-student">${escapeHtml(e.student || "?")}</span>
+                    <span class="sched-content">${escapeHtml((e.content || "").slice(0, 8))}${(e.content || "").length > 8 ? "…" : ""}</span>
+                    <i class="sched-del-entry" data-date="${dateStr}" data-idx="${i}">×</i>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+
+      ${state.schedule.editing ? `
+      <div class="sched-modal-overlay" id="schedModalOverlay">
+        <div class="sched-modal">
+          <h3>${state.schedule.editing} 添加课程</h3>
+          <label>时间 <input id="schedTime" type="text" value="${escapeHtml(state.schedule.editTime || "")}" placeholder="如 08:00-10:00" /></label>
+          <label>学生 <input id="schedStudent" type="text" value="${escapeHtml(state.schedule.editStudent || "")}" placeholder="学生姓名" /></label>
+          <label>内容 <input id="schedContent" type="text" value="${escapeHtml(state.schedule.editContent || "")}" placeholder="学习内容" /></label>
+          <div class="sched-modal-actions">
+            <button id="schedSave">保存</button>
+            <button id="schedCancel" class="alt">取消</button>
+          </div>
+        </div>
+      </div>
+      ` : ""}
+    </main>
+  `;
+}
+
 function renderFeedbackTab() {
   const fb = state.feedback;
   const strengths = ["头脑清醒", "逻辑清晰", "配合度高", "计算过程较严谨", "能够主动思考问题", "能够完成大部分题目", "订正和复盘意识较强", "某类题型理解较为深入"];
@@ -1100,6 +1198,85 @@ function generateFeedbackMessage() {
   }
 }
 
+function bindScheduleEvents() {
+  document.getElementById("schedPrev")?.addEventListener("click", () => {
+    let m = state.schedule.month - 1;
+    let y = state.schedule.year;
+    if (m < 1) { m = 12; y--; }
+    state.schedule.month = m;
+    state.schedule.year = y;
+    render();
+  });
+
+  document.getElementById("schedNext")?.addEventListener("click", () => {
+    let m = state.schedule.month + 1;
+    let y = state.schedule.year;
+    if (m > 12) { m = 1; y++; }
+    state.schedule.month = m;
+    state.schedule.year = y;
+    render();
+  });
+
+  document.getElementById("schedToday")?.addEventListener("click", () => {
+    const t = new Date();
+    state.schedule.month = t.getMonth() + 1;
+    state.schedule.year = t.getFullYear();
+    render();
+  });
+
+  document.querySelectorAll(".sched-add-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.schedule.editing = btn.dataset.date;
+      state.schedule.editTime = "";
+      state.schedule.editStudent = "";
+      state.schedule.editContent = "";
+      render();
+    });
+  });
+
+  document.querySelectorAll(".sched-del-entry").forEach((del) => {
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const date = del.dataset.date;
+      const idx = Number(del.dataset.idx);
+      if (state.schedule[date]) {
+        state.schedule[date].splice(idx, 1);
+        if (state.schedule[date].length === 0) delete state.schedule[date];
+      }
+      saveSchedule();
+      render();
+    });
+  });
+
+  document.getElementById("schedSave")?.addEventListener("click", () => {
+    const date = state.schedule.editing;
+    const entry = {
+      time: document.getElementById("schedTime")?.value || "",
+      student: document.getElementById("schedStudent")?.value || "",
+      content: document.getElementById("schedContent")?.value || "",
+    };
+    if (!entry.time && !entry.student && !entry.content) return;
+    if (!state.schedule[date]) state.schedule[date] = [];
+    state.schedule[date].push(entry);
+    state.schedule.editing = null;
+    saveSchedule();
+    render();
+  });
+
+  document.getElementById("schedCancel")?.addEventListener("click", () => {
+    state.schedule.editing = null;
+    render();
+  });
+
+  document.getElementById("schedModalOverlay")?.addEventListener("click", (e) => {
+    if (e.target.id === "schedModalOverlay") {
+      state.schedule.editing = null;
+      render();
+    }
+  });
+}
+
 function render() {
   const filteredRecords = getFilteredRecords();
   const selected = getSelectedRecord(filteredRecords);
@@ -1110,6 +1287,7 @@ function render() {
     <nav class="tab-nav">
       <button class="tab-btn ${state.activeTab === "archive" ? "active" : ""}" data-tab="archive">📋 学生档案</button>
       <button class="tab-btn ${state.activeTab === "feedback" ? "active" : ""}" data-tab="feedback">✉️ 家长反馈</button>
+      <button class="tab-btn ${state.activeTab === "schedule" ? "active" : ""}" data-tab="schedule">📅 课表安排</button>
     </nav>
     ${state.activeTab === "archive" ? `
     <main class="app-shell">
@@ -1314,12 +1492,13 @@ function render() {
         </section>
       </section>
     </main>
-    ` : renderFeedbackTab()}
+    ` : state.activeTab === "feedback" ? renderFeedbackTab() : renderScheduleTab()}
     ${renderPrintSheet(selected)}
   `;
 
   bindEvents();
   if (state.activeTab === "feedback") bindFeedbackEvents();
+  if (state.activeTab === "schedule") bindScheduleEvents();
 }
 
 function syncDraftFromForm(form) {
