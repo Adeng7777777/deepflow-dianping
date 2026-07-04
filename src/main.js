@@ -947,7 +947,8 @@ function renderScheduleTab() {
         ${(() => {
           const stats = getMonthStats(year, month);
           return `
-            <span class="sched-stat">📅 总课时：<b>${stats.totalClasses}</b></span>
+            <span class="sched-stat">📅 总课时：<b>${stats.totalClasses}</b> 节</span>
+            <span class="sched-stat">⏱️ 总小时：<b>${stats.totalHours.toFixed(1)}</b> 小时</span>
             ${state.schedule.showFees ? `<span class="sched-stat">💰 总课时费：<b>${stats.totalFee}</b></span>` : ""}
             <details class="sched-student-stats">
               <summary>👨‍🎓 学生明细</summary>
@@ -955,7 +956,7 @@ function renderScheduleTab() {
                 ${Object.entries(stats.perStudent).map(([name, s]) => `
                   <div class="sched-student-stat">
                     <strong>${escapeHtml(name)}</strong>
-                    <span>${s.count} 节</span>
+                    <span>${s.count} 节 · ${s.totalHours.toFixed(1)}h</span>
                     ${state.schedule.showFees ? `<span>¥${s.totalFee}</span>` : ""}
                   </div>
                 `).join("") || "<p>暂无数据</p>"}
@@ -1262,6 +1263,7 @@ function getMonthStats(year, month) {
   const perStudent = {};
   let totalClasses = 0;
   let totalFee = 0;
+  let totalHours = 0;
 
   Object.entries(state.schedule).forEach(([date, entries]) => {
     if (!Array.isArray(entries)) return;
@@ -1269,14 +1271,26 @@ function getMonthStats(year, month) {
     entries.forEach((e) => {
       totalClasses++;
       totalFee += e.fee || 0;
+      const hours = calcHours(e.time);
+      totalHours += hours;
       const name = e.student || "未知";
-      if (!perStudent[name]) perStudent[name] = { count: 0, totalFee: 0 };
+      if (!perStudent[name]) perStudent[name] = { count: 0, totalFee: 0, totalHours: 0 };
       perStudent[name].count++;
       perStudent[name].totalFee += e.fee || 0;
+      perStudent[name].totalHours += hours;
     });
   });
 
-  return { totalClasses, totalFee, perStudent };
+  return { totalClasses, totalFee, totalHours, perStudent };
+}
+
+function calcHours(timeStr) {
+  const parts = (timeStr || "").split("-");
+  if (parts.length < 2) return 0;
+  const [h1, m1] = (parts[0] || "").split(":").map(Number);
+  const [h2, m2] = (parts[1] || "").split(":").map(Number);
+  if (isNaN(h1) || isNaN(h2)) return 0;
+  return (h2 + (m2 || 0) / 60) - (h1 + (m1 || 0) / 60);
 }
 
 function bindScheduleEvents() {
