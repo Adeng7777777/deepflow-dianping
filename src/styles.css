@@ -621,6 +621,41 @@ button {
   cursor: pointer;
 }
 
+.sched-view-toggle {
+  display: flex;
+  gap: 4px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d8d0c2;
+}
+
+.sched-view-btn {
+  height: 38px;
+  padding: 0 16px;
+  border: 0;
+  background: #fffdfa;
+  color: #6a6f75;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sched-view-btn.active {
+  background: #246486;
+  color: #fff;
+}
+
+.sched-student-filter {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d8d0c2;
+  border-radius: 8px;
+  background: #fffdfa;
+  color: #252a30;
+  font-size: 14px;
+  outline: none;
+}
+
 .sched-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

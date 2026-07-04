@@ -846,7 +846,9 @@ function loadSchedule() {
       const t = new Date();
       data.year = t.getFullYear();
       data.month = t.getMonth() + 1;
+      data.viewMode = "teacher";
     }
+    if (!data.viewMode) data.viewMode = "teacher";
     return data;
   } catch {
     const t = new Date();
@@ -883,6 +885,16 @@ function renderScheduleTab() {
         <h2>${year}年${month}月</h2>
         <button id="schedNext" class="sched-nav">▶</button>
         <button id="schedToday" class="sched-today">今天</button>
+        <div class="sched-view-toggle">
+          <button class="sched-view-btn ${state.schedule.viewMode === "teacher" ? "active" : ""}" data-view="teacher">👩‍🏫 总表</button>
+          <button class="sched-view-btn ${state.schedule.viewMode === "student" ? "active" : ""}" data-view="student">👨‍🎓 分表</button>
+        </div>
+        ${state.schedule.viewMode === "student" ? `
+        <select id="schedStudentFilter" class="sched-student-filter">
+          <option value="">选择学生...</option>
+          ${getScheduleStudents().map((s) => `<option value="${escapeHtml(s)}" ${state.schedule.filterStudent === s ? "selected" : ""}>${escapeHtml(s)}</option>`).join("")}
+        </select>
+        ` : ""}
       </header>
 
       <div class="sched-weekdays">
@@ -893,7 +905,9 @@ function renderScheduleTab() {
         ${days.map((d) => {
           if (d === null) return `<div class="sched-day empty"></div>`;
           const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-          const entries = state.schedule[dateStr] || [];
+          const entries = (state.schedule[dateStr] || []).filter((e) =>
+            state.schedule.viewMode !== "student" || !state.schedule.filterStudent || e.student === state.schedule.filterStudent
+          );
           const isToday = year === today.getFullYear() && month === today.getMonth() + 1 && d === today.getDate();
           const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0;
           return `
@@ -1198,7 +1212,30 @@ function generateFeedbackMessage() {
   }
 }
 
+function getScheduleStudents() {
+  const students = new Set();
+  Object.values(state.schedule).forEach((arr) => {
+    if (Array.isArray(arr)) arr.forEach((e) => { if (e.student) students.add(e.student); });
+  });
+  return [...students].sort((a, b) => a.localeCompare(b, "zh-CN"));
+}
+
 function bindScheduleEvents() {
+  document.querySelectorAll(".sched-view-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.schedule.viewMode = btn.dataset.view;
+      state.schedule.filterStudent = "";
+      saveSchedule();
+      render();
+    });
+  });
+
+  document.getElementById("schedStudentFilter")?.addEventListener("change", (e) => {
+    state.schedule.filterStudent = e.target.value;
+    saveSchedule();
+    render();
+  });
+
   document.getElementById("schedPrev")?.addEventListener("click", () => {
     let m = state.schedule.month - 1;
     let y = state.schedule.year;
