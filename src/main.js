@@ -849,10 +849,12 @@ function loadSchedule() {
       data.viewMode = "teacher";
     }
     if (!data.viewMode) data.viewMode = "teacher";
+    if (data.showFees === undefined) data.showFees = true;
+    if (!data.defaultFee) data.defaultFee = 0;
     return data;
   } catch {
     const t = new Date();
-    return { year: t.getFullYear(), month: t.getMonth() + 1 };
+    return { year: t.getFullYear(), month: t.getMonth() + 1, viewMode: "teacher", showFees: true, defaultFee: 0 };
   }
 }
 
@@ -922,6 +924,7 @@ function renderScheduleTab() {
                     <span class="sched-time">${escapeHtml(e.time)}</span>
                     <span class="sched-student">${escapeHtml(e.student || "?")}</span>
                     <span class="sched-content">${escapeHtml(e.content || "")}</span>
+                    ${state.schedule.showFees && e.fee ? `<span class="sched-fee">¥${e.fee}</span>` : ""}
                     <i class="sched-del-entry" data-date="${dateStr}" data-idx="${i}">×</i>
                   </div>
                 `).join("")}
@@ -929,6 +932,35 @@ function renderScheduleTab() {
             </div>
           `;
         }).join("")}
+      </div>
+
+      <div class="sched-summary-bar">
+        <label class="sched-fee-switch">
+          <input id="schedFeeToggle" type="checkbox" ${state.schedule.showFees ? "checked" : ""} />
+          <span>显示课时费</span>
+        </label>
+        <label class="sched-default-fee">
+          默认课时费 <input id="schedDefaultFee" type="number" value="${state.schedule.defaultFee || ""}" placeholder="0" min="0" step="10" />
+        </label>
+        ${(() => {
+          const stats = getMonthStats(year, month);
+          return `
+            <span class="sched-stat">📅 总课时：<b>${stats.totalClasses}</b></span>
+            ${state.schedule.showFees ? `<span class="sched-stat">💰 总课时费：<b>${stats.totalFee}</b></span>` : ""}
+            <details class="sched-student-stats">
+              <summary>👨‍🎓 学生明细</summary>
+              <div class="sched-stats-grid">
+                ${Object.entries(stats.perStudent).map(([name, s]) => `
+                  <div class="sched-student-stat">
+                    <strong>${escapeHtml(name)}</strong>
+                    <span>${s.count} 节</span>
+                    ${state.schedule.showFees ? `<span>¥${s.totalFee}</span>` : ""}
+                  </div>
+                `).join("") || "<p>暂无数据</p>"}
+              </div>
+            </details>
+          `;
+        })()}
       </div>
 
       ${state.schedule.editing ? `
@@ -939,6 +971,7 @@ function renderScheduleTab() {
           <label>结束时间 <input id="schedTimeEnd" type="time" value="${escapeHtml(state.schedule.editTimeEnd || "")}" /></label>
           <label>学生 <input id="schedStudent" type="text" value="${escapeHtml(state.schedule.editStudent || "")}" placeholder="学生姓名" /></label>
           <label>内容 <input id="schedContent" type="text" value="${escapeHtml(state.schedule.editContent || "")}" placeholder="学习内容" /></label>
+          <label>课时费 <input id="schedFee" type="number" value="${escapeHtml(state.schedule.editFee != null ? state.schedule.editFee : (state.schedule.defaultFee || ""))}" placeholder="单节课时费" min="0" step="10" /></label>
           <div class="sched-modal-actions">
             <button id="schedSave">保存</button>
             <button id="schedCancel" class="alt">取消</button>
@@ -1221,6 +1254,29 @@ function getScheduleStudents() {
   return [...students].sort((a, b) => a.localeCompare(b, "zh-CN"));
 }
 
+function getMonthStats(year, month) {
+  const yearStr = String(year);
+  const monthStr = String(month).padStart(2, "0");
+  const perStudent = {};
+  let totalClasses = 0;
+  let totalFee = 0;
+
+  Object.entries(state.schedule).forEach(([date, entries]) => {
+    if (!Array.isArray(entries)) return;
+    if (!date.startsWith(`${yearStr}-${monthStr}`)) return;
+    entries.forEach((e) => {
+      totalClasses++;
+      totalFee += e.fee || 0;
+      const name = e.student || "未知";
+      if (!perStudent[name]) perStudent[name] = { count: 0, totalFee: 0 };
+      perStudent[name].count++;
+      perStudent[name].totalFee += e.fee || 0;
+    });
+  });
+
+  return { totalClasses, totalFee, perStudent };
+}
+
 function bindScheduleEvents() {
   document.querySelectorAll(".sched-view-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1235,6 +1291,17 @@ function bindScheduleEvents() {
     state.schedule.filterStudent = e.target.value;
     saveSchedule();
     render();
+  });
+
+  document.getElementById("schedFeeToggle")?.addEventListener("change", (e) => {
+    state.schedule.showFees = e.target.checked;
+    saveSchedule();
+    render();
+  });
+
+  document.getElementById("schedDefaultFee")?.addEventListener("change", (e) => {
+    state.schedule.defaultFee = Number(e.target.value) || 0;
+    saveSchedule();
   });
 
   document.getElementById("schedPrev")?.addEventListener("click", () => {
@@ -1297,6 +1364,7 @@ function bindScheduleEvents() {
       time: timeStr,
       student: document.getElementById("schedStudent")?.value || "",
       content: document.getElementById("schedContent")?.value || "",
+      fee: Number(document.getElementById("schedFee")?.value) || 0,
     };
     if (!entry.time && !entry.student && !entry.content) return;
     if (!state.schedule[date]) state.schedule[date] = [];
@@ -1340,6 +1408,7 @@ function bindScheduleEvents() {
       state.schedule.editTimeEnd = times[1] || "";
       state.schedule.editStudent = entry.student || "";
       state.schedule.editContent = entry.content || "";
+      state.schedule.editFee = entry.fee || 0;
       render();
     });
   });

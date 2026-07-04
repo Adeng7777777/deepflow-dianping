@@ -795,6 +795,107 @@ button {
   flex: 0 0 auto;
 }
 
+.sched-fee {
+  color: #7d4b38;
+  font-weight: 700;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.sched-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #e2d9ca;
+  border-radius: 8px;
+  background: #fbfaf7;
+}
+
+.sched-fee-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #3a4149;
+  cursor: pointer;
+}
+
+.sched-fee-switch input {
+  width: 16px;
+  height: 16px;
+  accent-color: #2e718d;
+}
+
+.sched-default-fee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #3a4149;
+}
+
+.sched-default-fee input {
+  width: 70px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d8d0c2;
+  border-radius: 6px;
+  background: #fffdfa;
+  color: #252a30;
+  outline: none;
+}
+
+.sched-stat {
+  font-size: 14px;
+  color: #3a4149;
+}
+
+.sched-stat b {
+  color: #20252b;
+}
+
+.sched-student-stats {
+  font-size: 13px;
+  color: #6a6f75;
+}
+
+.sched-student-stats summary {
+  font-weight: 700;
+  color: #3a4149;
+  cursor: pointer;
+}
+
+.sched-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sched-student-stat {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #fffdfa;
+  border: 1px solid #e4dccf;
+}
+
+.sched-student-stat strong {
+  color: #20252b;
+}
+
+.sched-student-stat span {
+  color: #6a6f75;
+  font-size: 12px;
+}
+
 .sched-modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
