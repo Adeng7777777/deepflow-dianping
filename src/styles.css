@@ -766,7 +766,8 @@ button {
   gap: 4px;
 }
 
-.sched-entry:hover .sched-del-entry {
+.sched-entry:hover .sched-del-entry,
+.sched-entry:hover .sched-move-entry {
   display: inline-flex;
 }
 
@@ -802,6 +803,26 @@ button {
   font-style: normal;
   cursor: pointer;
   flex: 0 0 auto;
+}
+
+.sched-move-entry {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e8e1d3;
+  color: #3a4149;
+  font-size: 10px;
+  font-style: normal;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.sched-move-entry:hover {
+  background: #5b7346;
+  color: #fff;
 }
 
 .sched-fee {
