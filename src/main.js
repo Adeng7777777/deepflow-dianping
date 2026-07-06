@@ -920,7 +920,7 @@ function renderScheduleTab() {
               </div>
               <div class="sched-entries">
                 ${entries.map((e, i) => `
-                  <div class="sched-entry" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
+                  <div class="sched-entry sched-color-${getDurationColor(e.time)}" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
                     <div class="sched-entry-row">
                       <span class="sched-time">${escapeHtml(e.time)}</span>
                       <span class="sched-student">${escapeHtml(e.student || "?")}</span>
@@ -949,6 +949,11 @@ function renderScheduleTab() {
           return `
             <span class="sched-stat">📅 总课时：<b>${stats.totalClasses}</b> 节</span>
             <span class="sched-stat">⏱️ 总小时：<b>${stats.totalHours.toFixed(1)}</b> 小时</span>
+            <span class="sched-stat sched-legend">
+              <i class="sched-dot c1"></i>&lt;1h: <b>${stats.color1}</b>
+              <i class="sched-dot c2"></i>1-2h: <b>${stats.color2}</b>
+              <i class="sched-dot c3"></i>&gt;2h: <b>${stats.color3}</b>
+            </span>
             ${state.schedule.showFees ? `<span class="sched-stat">💰 总课时费：<b>${stats.totalFee}</b></span>` : ""}
             <details class="sched-student-stats">
               <summary>👨‍🎓 学生明细</summary>
@@ -1264,6 +1269,7 @@ function getMonthStats(year, month) {
   let totalClasses = 0;
   let totalFee = 0;
   let totalHours = 0;
+  let color1 = 0, color2 = 0, color3 = 0;
 
   Object.entries(state.schedule).forEach(([date, entries]) => {
     if (!Array.isArray(entries)) return;
@@ -1273,6 +1279,10 @@ function getMonthStats(year, month) {
       totalFee += e.fee || 0;
       const hours = calcHours(e.time);
       totalHours += hours;
+      const c = getDurationColor(e.time);
+      if (c === "1") color1++;
+      else if (c === "2") color2++;
+      else if (c === "3") color3++;
       const name = e.student || "未知";
       if (!perStudent[name]) perStudent[name] = { count: 0, totalFee: 0, totalHours: 0 };
       perStudent[name].count++;
@@ -1281,7 +1291,7 @@ function getMonthStats(year, month) {
     });
   });
 
-  return { totalClasses, totalFee, totalHours, perStudent };
+  return { totalClasses, totalFee, totalHours, color1, color2, color3, perStudent };
 }
 
 function calcHours(timeStr) {
@@ -1291,6 +1301,14 @@ function calcHours(timeStr) {
   const [h2, m2] = (parts[1] || "").split(":").map(Number);
   if (isNaN(h1) || isNaN(h2)) return 0;
   return (h2 + (m2 || 0) / 60) - (h1 + (m1 || 0) / 60);
+}
+
+function getDurationColor(timeStr) {
+  const h = calcHours(timeStr);
+  if (h <= 0) return "0";
+  if (h < 1) return "1";
+  if (h <= 2) return "2";
+  return "3";
 }
 
 function bindScheduleEvents() {
