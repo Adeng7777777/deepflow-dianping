@@ -920,7 +920,7 @@ function renderScheduleTab() {
               </div>
               <div class="sched-entries">
                 ${entries.map((e, i) => `
-                  <div class="sched-entry sched-color-${getDurationColor(e.time)}" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
+                  <div class="sched-entry ${e.color ? `sched-color-${e.color}` : ""}" data-date="${dateStr}" data-idx="${i}" draggable="true" title="点击编辑 | 拖拽复制">
                     <div class="sched-entry-row">
                       <span class="sched-time">${escapeHtml(e.time)}</span>
                       <span class="sched-student">${escapeHtml(e.student || "?")}</span>
@@ -950,9 +950,9 @@ function renderScheduleTab() {
             <span class="sched-stat">📅 总课时：<b>${stats.totalClasses}</b> 节</span>
             <span class="sched-stat">⏱️ 总小时：<b>${stats.totalHours.toFixed(1)}</b> 小时</span>
             <span class="sched-stat sched-legend">
-              <i class="sched-dot c1"></i>&lt;1h: <b>${stats.color1}</b>
-              <i class="sched-dot c2"></i>1-2h: <b>${stats.color2}</b>
-              <i class="sched-dot c3"></i>&gt;2h: <b>${stats.color3}</b>
+              <i class="sched-dot c1"></i>标记1: <b>${stats.color1}</b>
+              <i class="sched-dot c2"></i>标记2: <b>${stats.color2}</b>
+              <i class="sched-dot c3"></i>标记3: <b>${stats.color3}</b>
             </span>
             ${state.schedule.showFees ? `<span class="sched-stat">💰 总课时费：<b>${stats.totalFee}</b></span>` : ""}
             <details class="sched-student-stats">
@@ -980,6 +980,12 @@ function renderScheduleTab() {
           <label>学生 <input id="schedStudent" type="text" value="${escapeHtml(state.schedule.editStudent || "")}" placeholder="学生姓名" /></label>
           <label>内容 <input id="schedContent" type="text" value="${escapeHtml(state.schedule.editContent || "")}" placeholder="学习内容" /></label>
           <label>课时费 <input id="schedFee" type="number" value="${escapeHtml(state.schedule.editFee != null ? state.schedule.editFee : (state.schedule.defaultFee || ""))}" placeholder="单节课时费" min="0" step="10" /></label>
+          <label>着色标记</label>
+          <div class="sched-color-pick">
+            <button class="sched-color-btn c1 ${(state.schedule.editColor || 0) === 1 ? "active" : ""}" data-color="1">🟢</button>
+            <button class="sched-color-btn c2 ${(state.schedule.editColor || 0) === 2 ? "active" : ""}" data-color="2">🔵</button>
+            <button class="sched-color-btn c3 ${(state.schedule.editColor || 0) === 3 ? "active" : ""}" data-color="3">🟠</button>
+          </div>
           <div class="sched-modal-actions">
             <button id="schedSave">保存</button>
             <button id="schedCancel" class="alt">取消</button>
@@ -1279,10 +1285,9 @@ function getMonthStats(year, month) {
       totalFee += e.fee || 0;
       const hours = calcHours(e.time);
       totalHours += hours;
-      const c = getDurationColor(e.time);
-      if (c === "1") color1++;
-      else if (c === "2") color2++;
-      else if (c === "3") color3++;
+      if (e.color === 1) color1++;
+      else if (e.color === 2) color2++;
+      else if (e.color === 3) color3++;
       const name = e.student || "未知";
       if (!perStudent[name]) perStudent[name] = { count: 0, totalFee: 0, totalHours: 0 };
       perStudent[name].count++;
@@ -1325,6 +1330,14 @@ function bindScheduleEvents() {
     state.schedule.filterStudent = e.target.value;
     saveSchedule();
     render();
+  });
+
+  document.querySelectorAll(".sched-color-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.schedule.editColor = Number(btn.dataset.color);
+      document.querySelectorAll(".sched-color-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
   });
 
   document.getElementById("schedFeeToggle")?.addEventListener("change", (e) => {
@@ -1371,6 +1384,8 @@ function bindScheduleEvents() {
       state.schedule.editTimeEnd = "";
       state.schedule.editStudent = "";
       state.schedule.editContent = "";
+      state.schedule.editFee = 0;
+      state.schedule.editColor = 0;
       render();
     });
   });
@@ -1399,6 +1414,7 @@ function bindScheduleEvents() {
       student: document.getElementById("schedStudent")?.value || "",
       content: document.getElementById("schedContent")?.value || "",
       fee: Number(document.getElementById("schedFee")?.value) || 0,
+      color: state.schedule.editColor || 0,
     };
     if (!entry.time && !entry.student && !entry.content) return;
     if (!state.schedule[date]) state.schedule[date] = [];
@@ -1444,6 +1460,7 @@ function bindScheduleEvents() {
       state.schedule.editStudent = entry.student || "";
       state.schedule.editContent = entry.content || "";
       state.schedule.editFee = entry.fee || 0;
+      state.schedule.editColor = entry.color || 0;
       render();
     });
   });
