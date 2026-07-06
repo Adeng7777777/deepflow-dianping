@@ -951,9 +951,9 @@ function renderScheduleTab() {
             <span class="sched-stat">📅 总课时：<b>${stats.totalClasses}</b> 节</span>
             <span class="sched-stat">⏱️ 总小时：<b>${stats.totalHours.toFixed(1)}</b> 小时</span>
             <span class="sched-stat sched-legend">
-              <i class="sched-dot c1"></i>标记1: <b>${stats.color1}</b>
-              <i class="sched-dot c2"></i>标记2: <b>${stats.color2}</b>
-              <i class="sched-dot c3"></i>标记3: <b>${stats.color3}</b>
+              <i class="sched-dot c1"></i>${stats.color1h.toFixed(1)}h
+              <i class="sched-dot c2"></i>${stats.color2h.toFixed(1)}h
+              <i class="sched-dot c3"></i>${stats.color3h.toFixed(1)}h
             </span>
             ${state.schedule.showFees ? `<span class="sched-stat">💰 总课时费：<b>${stats.totalFee}</b></span>` : ""}
             <details class="sched-student-stats">
@@ -1277,6 +1277,7 @@ function getMonthStats(year, month) {
   let totalFee = 0;
   let totalHours = 0;
   let color1 = 0, color2 = 0, color3 = 0;
+  let color1h = 0, color2h = 0, color3h = 0;
 
   Object.entries(state.schedule).forEach(([date, entries]) => {
     if (!Array.isArray(entries)) return;
@@ -1286,9 +1287,9 @@ function getMonthStats(year, month) {
       totalFee += e.fee || 0;
       const hours = calcHours(e.time);
       totalHours += hours;
-      if (e.color === 1) color1++;
-      else if (e.color === 2) color2++;
-      else if (e.color === 3) color3++;
+      if (e.color === 1) { color1++; color1h += hours; }
+      else if (e.color === 2) { color2++; color2h += hours; }
+      else if (e.color === 3) { color3++; color3h += hours; }
       const name = e.student || "未知";
       if (!perStudent[name]) perStudent[name] = { count: 0, totalFee: 0, totalHours: 0 };
       perStudent[name].count++;
@@ -1297,7 +1298,7 @@ function getMonthStats(year, month) {
     });
   });
 
-  return { totalClasses, totalFee, totalHours, color1, color2, color3, perStudent };
+  return { totalClasses, totalFee, totalHours, color1, color2, color3, color1h, color2h, color3h, perStudent };
 }
 
 function calcHours(timeStr) {
