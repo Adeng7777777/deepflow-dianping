@@ -927,6 +927,7 @@ function renderScheduleTab() {
                       ${state.schedule.showFees && e.fee ? `<span class="sched-fee">¥${e.fee}</span>` : ""}
                       <i class="sched-del-entry" data-date="${dateStr}" data-idx="${i}">×</i>
                       <i class="sched-move-entry" data-date="${dateStr}" data-idx="${i}" title="移到下个月">⤵️</i>
+                      <i class="sched-copy-entry" data-date="${dateStr}" data-idx="${i}" title="复制到下个月">📋</i>
                     </div>
                     <div class="sched-content">${escapeHtml(e.content || "")}</div>
                   </div>
@@ -1318,6 +1319,23 @@ function getDurationColor(timeStr) {
   return "3";
 }
 
+function moveEntryToMonth(date, idx, deleteSource) {
+  const entry = state.schedule[date]?.[idx];
+  if (!entry) return;
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + 1);
+  const newDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  if (!state.schedule[newDate]) state.schedule[newDate] = [];
+  state.schedule[newDate].push({ ...entry });
+  state.schedule[newDate].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  if (deleteSource) {
+    state.schedule[date].splice(idx, 1);
+    if (state.schedule[date].length === 0) delete state.schedule[date];
+  }
+  saveSchedule();
+  render();
+}
+
 function bindScheduleEvents() {
   document.querySelectorAll(".sched-view-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1435,20 +1453,14 @@ function bindScheduleEvents() {
   document.querySelectorAll(".sched-move-entry").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const date = btn.dataset.date;
-      const idx = Number(btn.dataset.idx);
-      const entry = state.schedule[date]?.[idx];
-      if (!entry) return;
-      const d = new Date(date);
-      d.setMonth(d.getMonth() + 1);
-      const newDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (!state.schedule[newDate]) state.schedule[newDate] = [];
-      state.schedule[newDate].push({ ...entry });
-      state.schedule[newDate].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
-      state.schedule[date].splice(idx, 1);
-      if (state.schedule[date].length === 0) delete state.schedule[date];
-      saveSchedule();
-      render();
+      moveEntryToMonth(btn.dataset.date, Number(btn.dataset.idx), true);
+    });
+  });
+
+  document.querySelectorAll(".sched-copy-entry").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      moveEntryToMonth(btn.dataset.date, Number(btn.dataset.idx), false);
     });
   });
 

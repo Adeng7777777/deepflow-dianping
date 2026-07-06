@@ -767,7 +767,8 @@ button {
 }
 
 .sched-entry:hover .sched-del-entry,
-.sched-entry:hover .sched-move-entry {
+.sched-entry:hover .sched-move-entry,
+.sched-entry:hover .sched-copy-entry {
   display: inline-flex;
 }
 
@@ -822,6 +823,26 @@ button {
 
 .sched-move-entry:hover {
   background: #5b7346;
+  color: #fff;
+}
+
+.sched-copy-entry {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e8e1d3;
+  color: #3a4149;
+  font-size: 9px;
+  font-style: normal;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.sched-copy-entry:hover {
+  background: #246486;
   color: #fff;
 }
 
