@@ -71,6 +71,7 @@ const state = {
   classStatusOptions: loadClassStatusOptions(),
   newStatusInput: "",
   activeTab: "archive",
+  showAdmin: false,
   schedule: loadSchedule(),
   feedback: {
     date: new Date().toISOString().slice(0, 10),
@@ -122,7 +123,18 @@ function escapeHtml(value) {
 }
 
 function uk(key) {
-  return currentUser ? `u_${currentUser}_${key}` : key;
+  return state.user ? `u_${state.user}_${key}` : key;
+}
+
+function getAllowedUsers() {
+  try {
+    return JSON.parse(localStorage.getItem("allowedUsers") || "[]");
+  } catch { return []; }
+}
+
+function isAdmin() {
+  const users = getAllowedUsers();
+  return users.length === 0 || users[0] === state.user;
 }
 
 function loadClassStatusOptions() {
@@ -1572,9 +1584,30 @@ function render() {
       <button class="tab-btn ${state.activeTab === "archive" ? "active" : ""}" data-tab="archive">📋 学生档案</button>
       <button class="tab-btn ${state.activeTab === "feedback" ? "active" : ""}" data-tab="feedback">✉️ 家长反馈</button>
       <button class="tab-btn ${state.activeTab === "schedule" ? "active" : ""}" data-tab="schedule">📅 课表安排</button>
-      <span class="user-badge">👤 ${escapeHtml(state.user)}</span>
+      <span class="user-badge">👤 ${escapeHtml(state.user)} ${isAdmin() ? "🔑" : ""}</span>
+      ${isAdmin() ? `<button id="adminBtn" class="logout-btn">用户管理</button>` : ""}
       <button id="logoutBtn" class="logout-btn">退出</button>
     </nav>
+    ${state.showAdmin ? `
+    <div class="admin-modal-overlay" id="adminModalOverlay">
+      <div class="admin-modal">
+        <h3>👥 用户管理</h3>
+        <div class="admin-list">
+          ${getAllowedUsers().map((u) => `
+            <div class="admin-user-row">
+              <span>${escapeHtml(u)} ${u === getAllowedUsers()[0] ? "🔑" : ""}</span>
+              ${u !== getAllowedUsers()[0] ? `<button class="admin-del-user" data-user="${escapeHtml(u)}">×</button>` : ""}
+            </div>
+          `).join("")}
+        </div>
+        <div class="admin-add-row">
+          <input id="adminAddInput" placeholder="输入新用户名" maxlength="20" />
+          <button id="adminAddBtn">添加</button>
+        </div>
+        <button id="adminClose" class="admin-close-btn">关闭</button>
+      </div>
+    </div>
+    ` : ""}
     ${state.activeTab === "archive" ? `
     <main class="app-shell">
       <section class="workspace">
@@ -1808,6 +1841,14 @@ function bindEvents() {
   document.getElementById("loginBtn")?.addEventListener("click", () => {
     const name = document.getElementById("loginInput")?.value.trim();
     if (!name) return;
+    const allowed = getAllowedUsers();
+    if (allowed.length === 0) {
+      allowed.push(name);
+      localStorage.setItem("allowedUsers", JSON.stringify(allowed));
+    } else if (!allowed.includes(name)) {
+      alert("账号未授权，请联系管理员。");
+      return;
+    }
     state.user = name;
     localStorage.setItem("currentUser", name);
     loadPersistentRecords();
@@ -1818,7 +1859,42 @@ function bindEvents() {
   document.getElementById("logoutBtn")?.addEventListener("click", () => {
     state.user = "";
     localStorage.removeItem("currentUser");
+    state.schedule = loadSchedule();
     render();
+  });
+
+  document.getElementById("adminBtn")?.addEventListener("click", () => {
+    state.showAdmin = true;
+    render();
+  });
+
+  document.getElementById("adminClose")?.addEventListener("click", () => {
+    state.showAdmin = false;
+    render();
+  });
+
+  document.getElementById("adminAddBtn")?.addEventListener("click", () => {
+    const input = document.getElementById("adminAddInput");
+    const name = input?.value.trim();
+    if (!name) return;
+    const users = getAllowedUsers();
+    if (!users.includes(name)) {
+      users.push(name);
+      localStorage.setItem("allowedUsers", JSON.stringify(users));
+    }
+    input.value = "";
+    render();
+  });
+
+  document.querySelectorAll(".admin-del-user").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const name = btn.dataset.user;
+      let users = getAllowedUsers();
+      users = users.filter((u) => u !== name);
+      localStorage.setItem("allowedUsers", JSON.stringify(users));
+      render();
+    });
   });
 
   document.querySelectorAll(".tab-btn").forEach((btn) => {
