@@ -60,7 +60,7 @@ const state = {
   status: "全部",
   sortKey: "date",
   selectedId: initialRecords[0].id,
-  deepseekKey: localStorage.getItem(uk("deepseekApiKey")) || "",
+  deepseekKey: localStorage.getItem(currentUser ? `u_${currentUser}_deepseekApiKey` : "deepseekApiKey") || "",
   aiStatus: "",
   storageStatus: "正在读取本地保存的学生记录...",
   isAiParsing: false,
@@ -123,8 +123,13 @@ function escapeHtml(value) {
 }
 
 function uk(key) {
-  const u = state.user || currentUser;
-  return u ? `u_${u}_${key}` : key;
+  return currentUser ? `u_${currentUser}_${key}` : key;
+}
+
+function setCurrentUser(name) {
+  currentUser = name;
+  localStorage.setItem("currentUser", name);
+  state.user = name;
 }
 
 function getAllowedUsers() {
@@ -1850,16 +1855,14 @@ function bindEvents() {
       alert("账号未授权，请联系管理员。");
       return;
     }
-    state.user = name;
-    localStorage.setItem("currentUser", name);
+    setCurrentUser(name);
     loadPersistentRecords();
     state.activeTab = "archive";
     render();
   });
 
   document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    state.user = "";
-    localStorage.removeItem("currentUser");
+    setCurrentUser("");
     state.schedule = loadSchedule();
     render();
   });
