@@ -852,9 +852,9 @@ function loadSchedule() {
     if (data.showFees === undefined) data.showFees = true;
     if (!data.defaultFee) data.defaultFee = 0;
     // Sort all date arrays
-  Object.keys(state.schedule).forEach(date => {
-    if (Array.isArray(state.schedule[date])) {
-      state.schedule[date].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  Object.keys(data).forEach(date => {
+    if (Array.isArray(data[date]) && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      data[date].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
     }
   });
   return data;
