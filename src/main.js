@@ -51,13 +51,14 @@ const subjects = ["全部", ...defaultSubjects];
 const statuses = ["全部", "进行中", "需跟进", "已完成"];
 
 const state = {
+  user: localStorage.getItem("currentUser") || "",
   records: [...initialRecords],
   query: "",
   subject: "全部",
   status: "全部",
   sortKey: "date",
   selectedId: initialRecords[0].id,
-  deepseekKey: localStorage.getItem("deepseekApiKey") || "",
+  deepseekKey: localStorage.getItem(uk("deepseekApiKey")) || "",
   aiStatus: "",
   storageStatus: "正在读取本地保存的学生记录...",
   isAiParsing: false,
@@ -118,10 +119,14 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function uk(key) {
+  return state.user ? `u_${state.user}_${key}` : key;
+}
+
 function loadClassStatusOptions() {
   const defaults = ["专注认真", "互动积极", "偶尔走神", "需要提醒"];
   try {
-    const custom = JSON.parse(localStorage.getItem("classStatusCustom") || "[]");
+    const custom = JSON.parse(localStorage.getItem(uk("classStatusCustom")) || "[]");
     return [...defaults, ...custom.filter((s) => !defaults.includes(s))];
   } catch {
     return defaults;
@@ -131,7 +136,7 @@ function loadClassStatusOptions() {
 function saveClassStatusOptions(options) {
   const defaults = ["专注认真", "互动积极", "偶尔走神", "需要提醒"];
   const custom = options.filter((s) => !defaults.includes(s));
-  localStorage.setItem("classStatusCustom", JSON.stringify(custom));
+  localStorage.setItem(uk("classStatusCustom"), JSON.stringify(custom));
   state.classStatusOptions = [...defaults, ...custom];
 }
 
@@ -444,7 +449,7 @@ function normalizeRecords(records) {
 
 function loadPersistentRecords() {
   try {
-    const raw = localStorage.getItem("trainingReviewRecords");
+    const raw = localStorage.getItem(uk("trainingReviewRecords"));
     const savedRecords = raw ? normalizeRecords(JSON.parse(raw)) : [];
 
     if (savedRecords.length) {
@@ -467,7 +472,7 @@ function loadPersistentRecords() {
 
 function persistRecords() {
   try {
-    localStorage.setItem("trainingReviewRecords", JSON.stringify(state.records));
+    localStorage.setItem(uk("trainingReviewRecords"), JSON.stringify(state.records));
     state.storageStatus = `已保存 ${state.records.length} 条记录到浏览器本地存储。`;
   } catch {
     state.storageStatus = "保存失败，浏览器存储空间可能已满。";
@@ -840,7 +845,7 @@ function renderRecordList(filteredRecords, selected) {
 
 function loadSchedule() {
   try {
-    const raw = localStorage.getItem("classSchedule");
+    const raw = localStorage.getItem(uk("classSchedule"));
     const data = raw ? JSON.parse(raw) : {};
     if (!data.year) {
       const t = new Date();
@@ -865,7 +870,7 @@ function loadSchedule() {
 }
 
 function saveSchedule() {
-  localStorage.setItem("classSchedule", JSON.stringify(state.schedule));
+  localStorage.setItem(uk("classSchedule"), JSON.stringify(state.schedule));
 }
 
 function getMonthDays(year, month) {
@@ -1551,10 +1556,22 @@ function render() {
   const evalSplit = splitEvaluation(selected?.evaluation || "");
 
   root.innerHTML = `
+    ${!state.user ? `
+    <div class="login-screen">
+      <div class="login-card">
+        <h1>📚 学生记录档案</h1>
+        <p>输入你的账号名进入工作台，不同账号数据互不影响。</p>
+        <input id="loginInput" type="text" placeholder="输入账号名" autofocus maxlength="20" />
+        <button id="loginBtn">进入</button>
+      </div>
+    </div>
+    ` : `
     <nav class="tab-nav">
       <button class="tab-btn ${state.activeTab === "archive" ? "active" : ""}" data-tab="archive">📋 学生档案</button>
       <button class="tab-btn ${state.activeTab === "feedback" ? "active" : ""}" data-tab="feedback">✉️ 家长反馈</button>
       <button class="tab-btn ${state.activeTab === "schedule" ? "active" : ""}" data-tab="schedule">📅 课表安排</button>
+      <span class="user-badge">👤 ${escapeHtml(state.user)}</span>
+      <button id="logoutBtn" class="logout-btn">退出</button>
     </nav>
     ${state.activeTab === "archive" ? `
     <main class="app-shell">
@@ -1761,6 +1778,7 @@ function render() {
     </main>
     ` : state.activeTab === "feedback" ? renderFeedbackTab() : renderScheduleTab()}
     ${renderPrintSheet(selected)}
+    `}
   `;
 
   bindEvents();
@@ -1785,6 +1803,22 @@ function syncDraftFromForm(form) {
 }
 
 function bindEvents() {
+  document.getElementById("loginBtn")?.addEventListener("click", () => {
+    const name = document.getElementById("loginInput")?.value.trim();
+    if (!name) return;
+    state.user = name;
+    localStorage.setItem("currentUser", name);
+    loadPersistentRecords();
+    state.activeTab = "archive";
+    render();
+  });
+
+  document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    state.user = "";
+    localStorage.removeItem("currentUser");
+    render();
+  });
+
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       state.activeTab = btn.dataset.tab;
@@ -1946,10 +1980,10 @@ function bindEvents() {
   document.getElementById("deepseekKey")?.addEventListener("input", (event) => {
     state.deepseekKey = event.target.value.trim();
     if (state.deepseekKey) {
-      localStorage.setItem("deepseekApiKey", state.deepseekKey);
+      localStorage.setItem(uk("deepseekApiKey"), state.deepseekKey);
       state.aiStatus = "DeepSeek 已启用，解析时会优先调用 AI。";
     } else {
-      localStorage.removeItem("deepseekApiKey");
+      localStorage.removeItem(uk("deepseekApiKey"));
       state.aiStatus = "已切回本地规则解析。";
     }
   });
@@ -2006,4 +2040,4 @@ async function parseAndApply(rawText, shouldSave) {
   render();
 }
 
-loadPersistentRecords();
+if (state.user) loadPersistentRecords(); else render();
