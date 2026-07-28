@@ -50,7 +50,7 @@ const defaultSubjects = ["数学", "英语", "语文", "物理", "化学", "素�
 const subjects = ["全部", ...defaultSubjects];
 const statuses = ["全部", "进行中", "需跟进", "已完成"];
 
-const currentUser = localStorage.getItem("currentUser") || "";
+let currentUser = localStorage.getItem("currentUser") || "";
 
 const state = {
   user: currentUser,
