@@ -50,8 +50,10 @@ const defaultSubjects = ["数学", "英语", "语文", "物理", "化学", "素�
 const subjects = ["全部", ...defaultSubjects];
 const statuses = ["全部", "进行中", "需跟进", "已完成"];
 
+const currentUser = localStorage.getItem("currentUser") || "";
+
 const state = {
-  user: localStorage.getItem("currentUser") || "",
+  user: currentUser,
   records: [...initialRecords],
   query: "",
   subject: "全部",
@@ -120,7 +122,7 @@ function escapeHtml(value) {
 }
 
 function uk(key) {
-  return state.user ? `u_${state.user}_${key}` : key;
+  return currentUser ? `u_${currentUser}_${key}` : key;
 }
 
 function loadClassStatusOptions() {
