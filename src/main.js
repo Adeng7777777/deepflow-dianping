@@ -851,7 +851,13 @@ function loadSchedule() {
     if (!data.viewMode) data.viewMode = "teacher";
     if (data.showFees === undefined) data.showFees = true;
     if (!data.defaultFee) data.defaultFee = 0;
-    return data;
+    // Sort all date arrays
+  Object.keys(state.schedule).forEach(date => {
+    if (Array.isArray(state.schedule[date])) {
+      state.schedule[date].sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    }
+  });
+  return data;
   } catch {
     const t = new Date();
     return { year: t.getFullYear(), month: t.getMonth() + 1, viewMode: "teacher", showFees: true, defaultFee: 0 };
@@ -909,7 +915,7 @@ function renderScheduleTab() {
           const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
           const entries = (state.schedule[dateStr] || []).filter((e) =>
             state.schedule.viewMode !== "student" || !state.schedule.filterStudent || e.student === state.schedule.filterStudent
-          ).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+          );
           const isToday = year === today.getFullYear() && month === today.getMonth() + 1 && d === today.getDate();
           const isWeekend = new Date(year, month - 1, d).getDay() % 6 === 0;
           return `
