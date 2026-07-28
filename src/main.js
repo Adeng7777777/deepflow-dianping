@@ -123,7 +123,8 @@ function escapeHtml(value) {
 }
 
 function uk(key) {
-  return state.user ? `u_${state.user}_${key}` : key;
+  const u = state.user || currentUser;
+  return u ? `u_${u}_${key}` : key;
 }
 
 function getAllowedUsers() {
