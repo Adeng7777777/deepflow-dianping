@@ -139,8 +139,7 @@ function getAllowedUsers() {
 }
 
 function isAdmin() {
-  const users = getAllowedUsers();
-  return users.length === 0 || users[0] === state.user;
+  return state.user === "Chiho";
 }
 
 function loadClassStatusOptions() {
@@ -1602,7 +1601,7 @@ function render() {
           ${getAllowedUsers().map((u) => `
             <div class="admin-user-row">
               <span>${escapeHtml(u)} ${u === getAllowedUsers()[0] ? "🔑" : ""}</span>
-              ${u !== getAllowedUsers()[0] ? `<button class="admin-del-user" data-user="${escapeHtml(u)}">×</button>` : ""}
+              ${u !== "Chiho" ? `<button class="admin-del-user" data-user="${escapeHtml(u)}">×</button>` : `<span class="admin-badge">管理员</span>`}
             </div>
           `).join("")}
         </div>
@@ -1847,13 +1846,15 @@ function bindEvents() {
   document.getElementById("loginBtn")?.addEventListener("click", () => {
     const name = document.getElementById("loginInput")?.value.trim();
     if (!name) return;
-    const allowed = getAllowedUsers();
-    if (allowed.length === 0) {
-      allowed.push(name);
-      localStorage.setItem("allowedUsers", JSON.stringify(allowed));
-    } else if (!allowed.includes(name)) {
-      alert("账号未授权，请联系管理员。");
-      return;
+    if (name !== "Chiho") {
+      const allowed = getAllowedUsers();
+      if (allowed.length === 0) {
+        allowed.push(name);
+        localStorage.setItem("allowedUsers", JSON.stringify(allowed));
+      } else if (!allowed.includes(name)) {
+        alert("账号未授权，请联系管理员。");
+        return;
+      }
     }
     setCurrentUser(name);
     loadPersistentRecords();
@@ -1894,6 +1895,7 @@ function bindEvents() {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const name = btn.dataset.user;
+      if (name === "Chiho") return;
       let users = getAllowedUsers();
       users = users.filter((u) => u !== name);
       localStorage.setItem("allowedUsers", JSON.stringify(users));

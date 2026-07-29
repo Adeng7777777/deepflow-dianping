@@ -1974,3 +1974,5 @@ body.print-previewing .print-sheet {
 .admin-add-row input { flex: 1; height: 40px; padding: 0 12px; border: 1px solid #d8d0c2; border-radius: 8px; background: #fff; outline: none; }
 .admin-add-row button { height: 40px; padding: 0 16px; border: 0; border-radius: 8px; background: #246486; color: #fff; font-weight: 700; cursor: pointer; }
 .admin-close-btn { height: 40px; border: 1px solid #d8d0c2; border-radius: 8px; background: #f0ebe0; color: #3a4149; font-weight: 700; cursor: pointer; }
+
+.admin-badge { color: #246486; font-weight: 700; font-size: 12px; }
