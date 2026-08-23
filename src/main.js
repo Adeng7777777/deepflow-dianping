@@ -866,7 +866,19 @@ function loadSchedule() {
   const t = new Date();
   try {
     const raw = localStorage.getItem(uk("classSchedule"));
-    const data = raw ? JSON.parse(raw) : {};
+    let data = raw ? JSON.parse(raw) : {};
+
+    // 如果主数据是空的，尝试从备份恢复
+    const hasEntries = Object.keys(data).some((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(data[k]) && data[k].length > 0);
+    if (!hasEntries) {
+      const backup = localStorage.getItem(uk("classSchedule_backup"));
+      if (backup) {
+        const backupData = JSON.parse(backup);
+        const backupHasEntries = Object.keys(backupData).some((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(backupData[k]) && backupData[k].length > 0);
+        if (backupHasEntries) data = backupData;
+      }
+    }
+
     if (!data.year) {
       data.year = t.getFullYear();
       data.month = t.getMonth() + 1;
@@ -894,7 +906,13 @@ function loadSchedule() {
 }
 
 function saveSchedule() {
-  localStorage.setItem(uk("classSchedule"), JSON.stringify(state.schedule));
+  const dataStr = JSON.stringify(state.schedule);
+  localStorage.setItem(uk("classSchedule"), dataStr);
+  // 只在有课表数据时写备份
+  const hasEntries = Object.keys(state.schedule).some((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(state.schedule[k]) && state.schedule[k].length > 0);
+  if (hasEntries) {
+    localStorage.setItem(uk("classSchedule_backup"), dataStr);
+  }
 }
 
 function getMonthDays(year, month) {
@@ -992,6 +1010,9 @@ function renderScheduleTab() {
         <button id="schedNext" class="sched-nav">▶</button>
         <button id="schedToday" class="sched-today">今天</button>
         <button id="schedStatsBtn" class="sched-today ${state.schedule.showStats ? "active" : ""}">📊 课时统计</button>
+        <button id="schedExport" class="sched-today" title="导出全部课表数据">⬇️ 导出</button>
+        <button id="schedImport" class="sched-today" title="从JSON文件导入">⬆️ 导入</button>
+        <input id="schedImportFile" type="file" accept="application/json" style="display:none" />
         <div class="sched-view-toggle">
           <button class="sched-view-btn ${state.schedule.viewMode === "teacher" ? "active" : ""}" data-view="teacher">👩‍🏫 总表</button>
           <button class="sched-view-btn ${state.schedule.viewMode === "student" ? "active" : ""}" data-view="student">👨‍🎓 分表</button>
@@ -1465,6 +1486,38 @@ function bindScheduleEvents() {
       document.querySelectorAll(".sched-color-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
     });
+  });
+
+  document.getElementById("schedExport")?.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(state.schedule, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `课表备份_${state.user}_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("schedImport")?.addEventListener("click", () => {
+    document.getElementById("schedImportFile")?.click();
+  });
+
+  document.getElementById("schedImportFile")?.addEventListener("change", (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        state.schedule = data;
+        saveSchedule();
+        render();
+        alert("导入成功");
+      } catch (err) {
+        alert("导入失败：文件格式不正确");
+      }
+    };
+    reader.readAsText(file);
   });
 
   document.getElementById("schedStatsBtn")?.addEventListener("click", () => {
