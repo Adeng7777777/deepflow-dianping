@@ -863,11 +863,11 @@ function renderRecordList(filteredRecords, selected) {
 }
 
 function loadSchedule() {
+  const t = new Date();
   try {
     const raw = localStorage.getItem(uk("classSchedule"));
     const data = raw ? JSON.parse(raw) : {};
     if (!data.year) {
-      const t = new Date();
       data.year = t.getFullYear();
       data.month = t.getMonth() + 1;
       data.viewMode = "teacher";
