@@ -875,6 +875,10 @@ function loadSchedule() {
     if (!data.viewMode) data.viewMode = "teacher";
     if (data.showFees === undefined) data.showFees = true;
     if (!data.defaultFee) data.defaultFee = 0;
+    if (!data.showStats) data.showStats = false;
+    if (!data.statsStudents) data.statsStudents = [];
+    if (!data.statsStart) data.statsStart = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-01`;
+    if (!data.statsEnd) data.statsEnd = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-31`;
     // Sort all date arrays
   Object.keys(data).forEach(date => {
     if (Array.isArray(data[date]) && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -884,7 +888,8 @@ function loadSchedule() {
   return data;
   } catch {
     const t = new Date();
-    return { year: t.getFullYear(), month: t.getMonth() + 1, viewMode: "teacher", showFees: true, defaultFee: 0 };
+    const ym = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
+    return { year: t.getFullYear(), month: t.getMonth() + 1, viewMode: "teacher", showFees: true, defaultFee: 0, showStats: false, statsStudents: [], statsStart: `${ym}-01`, statsEnd: `${ym}-31` };
   }
 }
 
@@ -902,6 +907,75 @@ function getMonthDays(year, month) {
   return days;
 }
 
+function renderStatsPanel() {
+  const allStudents = getScheduleStudents();
+  const sel = state.schedule.statsStudents || [];
+  const start = state.schedule.statsStart || "";
+  const end = state.schedule.statsEnd || "";
+
+  const results = {};
+  let grandClasses = 0;
+  let grandHours = 0;
+  let grandFee = 0;
+
+  Object.entries(state.schedule).forEach(([date, entries]) => {
+    if (!Array.isArray(entries)) return;
+    if (date < start || date > end) return;
+    entries.forEach((e) => {
+      if (sel.length && !sel.includes(e.student)) return;
+      const name = e.student || "未知";
+      if (!results[name]) results[name] = { count: 0, hours: 0, fee: 0, entries: [] };
+      results[name].count++;
+      const h = calcHours(e.time);
+      results[name].hours += h;
+      results[name].fee += e.fee || 0;
+      results[name].entries.push({ date, ...e });
+      grandClasses++;
+      grandHours += h;
+      grandFee += e.fee || 0;
+    });
+  });
+
+  return `
+    <div class="stats-panel">
+      <h3>📊 课时统计</h3>
+      <div class="stats-controls">
+        <label>开始日期 <input id="statsStart" type="date" value="${escapeHtml(start)}" /></label>
+        <label>结束日期 <input id="statsEnd" type="date" value="${escapeHtml(end)}" /></label>
+        <div class="stats-student-pick">
+          <span>选择学生：</span>
+          ${allStudents.map((s) => `<button class="stats-student-chip ${sel.includes(s) ? "active" : ""}" data-student="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
+          <button id="statsClearStudents" class="stats-clear-btn">清空</button>
+        </div>
+      </div>
+
+      <div class="stats-grand">
+        <span>📅 总课时：<b>${grandClasses}</b> 节</span>
+        <span>⏱️ 总时长：<b>${grandHours.toFixed(1)}</b> 小时</span>
+        ${state.schedule.showFees ? `<span>💰 总课时费：<b>¥${grandFee}</b></span>` : ""}
+      </div>
+
+      <div class="stats-per-student">
+        ${Object.entries(results).map(([name, r]) => `
+          <div class="stats-student-block">
+            <h4>${escapeHtml(name)} · ${r.count} 节 · ${r.hours.toFixed(1)}h ${state.schedule.showFees ? `· ¥${r.fee}` : ""}</h4>
+            <div class="stats-entry-list">
+              ${r.entries.map((e) => `
+                <div class="stats-entry-row">
+                  <span class="stats-date">${escapeHtml(e.date)}</span>
+                  <span class="stats-time">${escapeHtml(e.time)}</span>
+                  <span class="stats-content">${escapeHtml(e.content || "")}</span>
+                  ${state.schedule.showFees && e.fee ? `<span class="stats-fee">¥${e.fee}</span>` : ""}
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `).join("") || "<p class=\"stats-empty\">该日期段内没有匹配的课程记录</p>"}
+      </div>
+    </div>
+  `;
+}
+
 function renderScheduleTab() {
   const today = new Date();
   const year = state.schedule.year || today.getFullYear();
@@ -917,6 +991,7 @@ function renderScheduleTab() {
         <h2>${year}年${month}月</h2>
         <button id="schedNext" class="sched-nav">▶</button>
         <button id="schedToday" class="sched-today">今天</button>
+        <button id="schedStatsBtn" class="sched-today ${state.schedule.showStats ? "active" : ""}">📊 课时统计</button>
         <div class="sched-view-toggle">
           <button class="sched-view-btn ${state.schedule.viewMode === "teacher" ? "active" : ""}" data-view="teacher">👩‍🏫 总表</button>
           <button class="sched-view-btn ${state.schedule.viewMode === "student" ? "active" : ""}" data-view="student">👨‍🎓 分表</button>
@@ -1002,6 +1077,8 @@ function renderScheduleTab() {
           `;
         })()}
       </div>
+
+      ${state.schedule.showStats ? renderStatsPanel() : ""}
 
       ${state.schedule.editing ? `
       <div class="sched-modal-overlay" id="schedModalOverlay">
@@ -1388,6 +1465,42 @@ function bindScheduleEvents() {
       document.querySelectorAll(".sched-color-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
     });
+  });
+
+  document.getElementById("schedStatsBtn")?.addEventListener("click", () => {
+    state.schedule.showStats = !state.schedule.showStats;
+    saveSchedule();
+    render();
+  });
+
+  document.getElementById("statsStart")?.addEventListener("change", (e) => {
+    state.schedule.statsStart = e.target.value;
+    saveSchedule();
+    render();
+  });
+
+  document.getElementById("statsEnd")?.addEventListener("change", (e) => {
+    state.schedule.statsEnd = e.target.value;
+    saveSchedule();
+    render();
+  });
+
+  document.querySelectorAll(".stats-student-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const name = chip.dataset.student;
+      const arr = state.schedule.statsStudents;
+      const idx = arr.indexOf(name);
+      if (idx >= 0) arr.splice(idx, 1);
+      else arr.push(name);
+      saveSchedule();
+      render();
+    });
+  });
+
+  document.getElementById("statsClearStudents")?.addEventListener("click", () => {
+    state.schedule.statsStudents = [];
+    saveSchedule();
+    render();
   });
 
   document.getElementById("schedFeeToggle")?.addEventListener("change", (e) => {

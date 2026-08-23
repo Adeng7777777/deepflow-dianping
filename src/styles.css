@@ -1976,3 +1976,25 @@ body.print-previewing .print-sheet {
 .admin-close-btn { height: 40px; border: 1px solid #d8d0c2; border-radius: 8px; background: #f0ebe0; color: #3a4149; font-weight: 700; cursor: pointer; }
 
 .admin-badge { color: #246486; font-weight: 700; font-size: 12px; }
+
+.stats-panel { margin-top: 16px; padding: 16px; border: 1px solid #e2d9ca; border-radius: 8px; background: #fbfaf7; display: grid; gap: 14px; }
+.stats-panel h3 { margin: 0; font-size: 16px; }
+.stats-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.stats-controls label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: #3a4149; }
+.stats-controls input[type="date"] { height: 36px; padding: 0 10px; border: 1px solid #d8d0c2; border-radius: 6px; background: #fffdfa; }
+.stats-student-pick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; font-weight: 700; color: #3a4149; }
+.stats-student-chip { height: 30px; padding: 0 12px; border: 1px solid #d8d0c2; border-radius: 99px; background: #fffdfa; color: #4d555d; font-size: 12px; font-weight: 600; cursor: pointer; }
+.stats-student-chip.active { border-color: #2e718d; background: #e5edf2; color: #245c7d; }
+.stats-clear-btn { height: 30px; padding: 0 12px; border: 0; border-radius: 99px; background: #e8e1d3; color: #6a6f75; font-size: 12px; cursor: pointer; }
+.stats-grand { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; color: #3a4149; padding: 10px 12px; border-radius: 6px; background: #f0ebe0; }
+.stats-grand b { color: #20252b; }
+.stats-per-student { display: grid; gap: 12px; }
+.stats-student-block { border: 1px solid #e4dccf; border-radius: 6px; padding: 10px; background: #fffdfa; }
+.stats-student-block h4 { margin: 0 0 8px; font-size: 14px; }
+.stats-entry-list { display: grid; gap: 4px; }
+.stats-entry-row { display: flex; gap: 8px; font-size: 12px; padding: 4px 8px; border-radius: 4px; background: #f5f1e9; color: #4d555d; }
+.stats-date { color: #7d4b38; font-weight: 700; white-space: nowrap; }
+.stats-time { color: #245c7d; font-weight: 700; white-space: nowrap; }
+.stats-content { flex: 1; word-break: break-word; }
+.stats-fee { color: #7d4b38; font-weight: 700; white-space: nowrap; }
+.stats-empty { color: #8c8680; font-size: 13px; }
