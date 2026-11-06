@@ -132,6 +132,89 @@ function setCurrentUser(name) {
   state.user = name;
 }
 
+/* ===== 云端同步 ===== */
+let syncTimer = null;
+let syncStatus = "";
+let cloudReady = false; // 登录时拉取成功后才允许自动上传，防止本地空数据覆盖云端
+
+function collectAllData() {
+  return {
+    schedule: state.schedule,
+    records: state.records,
+    classStatusOptions: state.classStatusOptions,
+    updatedAt: Date.now(),
+  };
+}
+
+function applyAllData(data) {
+  if (data.schedule) {
+    state.schedule = data.schedule;
+    localStorage.setItem(uk("classSchedule"), JSON.stringify(data.schedule));
+    localStorage.setItem(uk("classSchedule_backup"), JSON.stringify(data.schedule));
+  }
+  if (Array.isArray(data.records)) {
+    state.records = data.records;
+    localStorage.setItem(uk("trainingReviewRecords"), JSON.stringify(data.records));
+  }
+  if (Array.isArray(data.classStatusOptions)) {
+    state.classStatusOptions = data.classStatusOptions;
+  }
+}
+
+function pushToCloud() {
+  if (!state.user) return;
+  if (!cloudReady) {
+    syncStatus = "等待云端连接…";
+    return;
+  }
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      syncStatus = "同步中…";
+      const res = await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: state.user, data: collectAllData() }),
+      });
+      if (res.ok) {
+        syncStatus = "已同步 ☁️";
+      } else {
+        const err = await res.json().catch(() => ({}));
+        syncStatus = err.error === "云端同步未配置" ? "仅本地" : "同步失败";
+      }
+    } catch {
+      syncStatus = "离线";
+    }
+    const el = document.getElementById("syncStatus");
+    if (el) el.textContent = syncStatus;
+  }, 1200);
+}
+
+async function pullFromCloud() {
+  if (!state.user) return null;
+  try {
+    const res = await fetch(`/api/data?user=${encodeURIComponent(state.user)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      if (err.error === "云端同步未配置") syncStatus = "仅本地存储";
+      return null;
+    }
+    cloudReady = true;
+    const payload = await res.json();
+    return payload.data || null;
+  } catch {
+    return null;
+  }
+}
+
+function countScheduleEntries(sch) {
+  if (!sch) return 0;
+  return Object.keys(sch).reduce((n, k) => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(sch[k])) return n + sch[k].length;
+    return n;
+  }, 0);
+}
+
 function getAllowedUsers() {
   try {
     return JSON.parse(localStorage.getItem("allowedUsers") || "[]");
@@ -493,6 +576,7 @@ function persistRecords() {
   try {
     localStorage.setItem(uk("trainingReviewRecords"), JSON.stringify(state.records));
     state.storageStatus = `已保存 ${state.records.length} 条记录到浏览器本地存储。`;
+    pushToCloud();
   } catch {
     state.storageStatus = "保存失败，浏览器存储空间可能已满。";
   }
@@ -913,6 +997,7 @@ function saveSchedule() {
   if (hasEntries) {
     localStorage.setItem(uk("classSchedule_backup"), dataStr);
   }
+  pushToCloud();
 }
 
 function getMonthDays(year, month) {
@@ -1013,6 +1098,8 @@ function renderScheduleTab() {
         <button id="schedExport" class="sched-today" title="导出全部课表数据">⬇️ 导出</button>
         <button id="schedImport" class="sched-today" title="从JSON文件导入">⬆️ 导入</button>
         <input id="schedImportFile" type="file" accept="application/json" style="display:none" />
+        <button id="cloudPushBtn" class="sched-today" title="把本地数据上传到云端">☁️ 传云端</button>
+        <button id="cloudPullBtn" class="sched-today" title="从云端下载数据覆盖本地">☁️ 拉云端</button>
         <div class="sched-view-toggle">
           <button class="sched-view-btn ${state.schedule.viewMode === "teacher" ? "active" : ""}" data-view="teacher">👩‍🏫 总表</button>
           <button class="sched-view-btn ${state.schedule.viewMode === "student" ? "active" : ""}" data-view="student">👨‍🎓 分表</button>
@@ -1488,6 +1575,43 @@ function bindScheduleEvents() {
     });
   });
 
+  document.getElementById("cloudPushBtn")?.addEventListener("click", async () => {
+    if (!state.user) return;
+    if (!confirm(`确定把当前本地数据上传到云端（账号：${state.user}）？会覆盖云端旧数据。`)) return;
+    try {
+      const res = await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user: state.user, data: collectAllData() }),
+      });
+      if (res.ok) {
+        cloudReady = true;
+        syncStatus = "已上传 ☁️";
+        alert("上传成功");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error === "云端同步未配置" ? "云端还没配置好，请先在 Vercel 建 Upstash Redis 并连接项目" : "上传失败：" + (err.error || res.status));
+      }
+    } catch (e) {
+      alert("上传失败：" + e.message);
+    }
+    render();
+  });
+
+  document.getElementById("cloudPullBtn")?.addEventListener("click", async () => {
+    if (!state.user) return;
+    if (!confirm(`确定从云端下载（账号：${state.user}）？会覆盖本地数据。`)) return;
+    const cloud = await pullFromCloud();
+    if (!cloud) {
+      alert("云端没有数据，或还没配置好云端");
+      return;
+    }
+    applyAllData(cloud);
+    syncStatus = "已从云端下载 ☁️";
+    alert(`已下载：课表 ${countScheduleEntries(cloud.schedule)} 条，档案 ${(cloud.records || []).length} 条`);
+    render();
+  });
+
   document.getElementById("schedExport")?.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state.schedule, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1755,6 +1879,7 @@ function render() {
       <button class="tab-btn ${state.activeTab === "archive" ? "active" : ""}" data-tab="archive">📋 学生档案</button>
       <button class="tab-btn ${state.activeTab === "feedback" ? "active" : ""}" data-tab="feedback">✉️ 家长反馈</button>
       <button class="tab-btn ${state.activeTab === "schedule" ? "active" : ""}" data-tab="schedule">📅 课表安排</button>
+      <span id="syncStatus" class="sync-status">${syncStatus || ""}</span>
       <span class="user-badge">👤 ${escapeHtml(state.user)} ${isAdmin() ? "🔑" : ""}</span>
       ${isAdmin() ? `<button id="adminBtn" class="logout-btn">用户管理</button>` : ""}
       <button id="logoutBtn" class="logout-btn">退出</button>
@@ -2009,7 +2134,7 @@ function syncDraftFromForm(form) {
 }
 
 function bindEvents() {
-  document.getElementById("loginBtn")?.addEventListener("click", () => {
+  document.getElementById("loginBtn")?.addEventListener("click", async () => {
     const name = document.getElementById("loginInput")?.value.trim();
     if (!name) return;
     if (name !== "Chiho") {
@@ -2023,7 +2148,25 @@ function bindEvents() {
       }
     }
     setCurrentUser(name);
+
+    // 先加载本地
     loadPersistentRecords();
+    state.schedule = loadSchedule();
+    state.classStatusOptions = loadClassStatusOptions();
+
+    // 再尝试云端数据
+    const cloud = await pullFromCloud();
+    const localCount = countScheduleEntries(state.schedule);
+    const cloudCount = cloud ? countScheduleEntries(cloud.schedule) : 0;
+
+    if (cloud && (cloudCount >= localCount)) {
+      applyAllData(cloud);
+      syncStatus = "已从云端加载 ☁️";
+    } else {
+      syncStatus = localCount > 0 ? "本地数据已上传 ☁️" : "";
+      pushToCloud();
+    }
+
     state.activeTab = "archive";
     render();
   });
