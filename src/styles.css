@@ -352,6 +352,40 @@ button {
   border-color: #ded6c7;
 }
 
+@media (max-width: 760px) {
+  .tab-nav {
+    flex-wrap: wrap;
+    padding: 10px 10px 0;
+    gap: 4px;
+  }
+  .tab-btn {
+    flex: 1 1 auto;
+    padding: 10px 8px;
+    font-size: 13px;
+    margin-right: 0;
+    white-space: nowrap;
+  }
+  .user-badge {
+    order: 10;
+    margin-left: 0 !important;
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+  .logout-btn,
+  #adminBtn {
+    order: 11;
+    height: 30px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+  .sync-status {
+    order: 9;
+    flex: 1 1 100%;
+    text-align: right;
+    font-size: 11px;
+  }
+}
+
 /* Feedback tab */
 .feedback-app {
   display: grid;
@@ -715,6 +749,10 @@ button {
   color: #3a4149;
 }
 
+.day-weekday {
+  display: none;
+}
+
 .sched-add-btn {
   width: 22px;
   height: 22px;
@@ -1056,11 +1094,110 @@ button {
 }
 
 @media (max-width: 760px) {
+  /* 手机端：日历改为纵向日程列表 */
+  .sched-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .sched-header h2 {
+    font-size: 18px;
+    flex: 1 1 100%;
+    order: -1;
+    text-align: center;
+  }
+  .sched-nav,
+  .sched-today {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .sched-view-toggle {
+    flex: 1 1 100%;
+  }
+  .sched-view-btn {
+    flex: 1;
+    height: 34px;
+    font-size: 13px;
+  }
+  .sched-weekdays {
+    display: none;
+  }
+  .sched-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+  }
   .sched-day {
-    min-height: 100px;
+    min-height: auto;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e4dccf;
+    gap: 8px;
+  }
+  .sched-day.empty {
+    display: none;
+  }
+  .day-date {
+    font-size: 17px !important;
+  }
+  .day-weekday {
+    display: inline !important;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8c8680;
+    margin-left: 6px;
+  }
+  .sched-day-num {
+    justify-content: flex-start;
+    gap: 4px;
+  }
+  .sched-add-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
   }
   .sched-entry {
-    font-size: 10px;
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+  .sched-entry-row {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .sched-time,
+  .sched-student {
+    font-size: 13px;
+  }
+  .sched-content {
+    font-size: 13px;
+  }
+  .sched-del-entry,
+  .sched-move-entry,
+  .sched-copy-entry {
+    display: inline-flex !important;
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  .sched-summary-bar {
+    gap: 10px;
+    padding: 12px;
+  }
+  .sched-stat {
+    font-size: 13px;
+  }
+  .stats-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .stats-entry-row {
+    flex-wrap: wrap;
   }
 }
 

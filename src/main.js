@@ -1003,7 +1003,8 @@ function saveSchedule() {
 function getMonthDays(year, month) {
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
-  const startDow = firstDay.getDay();
+  // 周一为一周第一天：周日(0)->6, 周一(1)->0 ...
+  const startDow = (firstDay.getDay() + 6) % 7;
   const days = [];
   for (let i = 0; i < startDow; i++) days.push(null);
   for (let d = 1; d <= lastDay.getDate(); d++) days.push(d);
@@ -1085,7 +1086,7 @@ function renderScheduleTab() {
   const month = state.schedule.month || today.getMonth() + 1;
   const monthKey = `${year}-${String(month).padStart(2, "0")}`;
   const days = getMonthDays(year, month);
-  const weekHeaders = ["日", "一", "二", "三", "四", "五", "六"];
+  const weekHeaders = ["一", "二", "三", "四", "五", "六", "日"];
 
   return `
     <main class="schedule-app">
@@ -1128,7 +1129,8 @@ function renderScheduleTab() {
           return `
             <div class="sched-day ${isToday ? "today" : ""} ${isWeekend ? "weekend" : ""}" data-date="${dateStr}">
               <div class="sched-day-num">
-                <span>${d}</span>
+                <span class="day-date">${d}</span>
+                <span class="day-weekday">周${["日","一","二","三","四","五","六"][new Date(year, month - 1, d).getDay()]}</span>
                 <button class="sched-add-btn" data-date="${dateStr}">+</button>
               </div>
               <div class="sched-entries">
