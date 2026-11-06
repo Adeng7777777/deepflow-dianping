@@ -42,9 +42,15 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (!REDIS_URL || !REDIS_TOKEN) {
+    const envKeys = Object.keys(process.env).filter((k) =>
+      /KV_|UPSTASH|REDIS/i.test(k)
+    );
     return res.status(503).json({
       error: "云端同步未配置",
       hint: "请在 Vercel 项目里创建 Upstash Redis 并连接项目",
+      foundEnvKeys: envKeys,
+      hasUrl: !!REDIS_URL,
+      hasToken: !!REDIS_TOKEN,
     });
   }
 
